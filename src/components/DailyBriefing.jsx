@@ -43,8 +43,9 @@ export default function DailyBriefing({
       {/* Header */}
       <div className="briefing-header">
         <div className="briefing-header-content">
-          <h1 className="briefing-title">ShadowOps Daily Briefing</h1>
+          <h1 className="briefing-title">ShadowOps Executive Briefing</h1>
           <p className="briefing-subtitle">As of {formatDate(asOfDate)}</p>
+          <p style={{ margin: '0.25rem 0 0 0', color: '#666', fontSize: '0.85rem' }}>Data source: CSV snapshot</p>
         </div>
       </div>
 
@@ -127,31 +128,32 @@ export default function DailyBriefing({
 
       {/* Recommended Next Jobs */}
       <section className="briefing-section briefing-recommended">
-        <h2>Recommended Next Jobs</h2>
-        {recommendedJobs.length > 0 ? (
-          <div className="briefing-jobs-list">
-            {recommendedJobs.map((job, idx) => (
-              <div key={`${job.Job}-${idx}`} className="briefing-job-row">
-                <div className="briefing-job-primary">
-                  <span className="briefing-job-id">{job.Job}</span>
-                  <span className="briefing-job-customer">{job.Customer || '—'}</span>
-                </div>
-                <div className="briefing-job-meta">
-                  <span className="briefing-job-wc">{job.WorkCenter}</span>
-                  <span className="briefing-job-due">{job.DueDate}</span>
-                </div>
-                <div className="briefing-job-status">
-                  <StatusPill status={job.status} />
-                </div>
-                <div className="briefing-job-priority">
-                  Score: {job.priorityScore.toFixed(0)}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="briefing-no-data">No jobs available.</p>
-        )}
+        <h2>What ShadowOps Recommends</h2>
+        <div style={{ padding: '0.5rem 0' }}>
+          <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
+            {recommendedJobs[0] ? (
+              <li>
+                Run Job {recommendedJobs[0].Job} next on {recommendedJobs[0].WorkCenter}
+              </li>
+            ) : (
+              <li>No recommended next job.</li>
+            )}
+
+            {topHotspots[0] ? (
+              <li>Avoid starting new jobs on {topHotspots[0].workCenter} today.</li>
+            ) : (
+              <li>No overloaded work centers detected.</li>
+            )}
+
+            {jobs.find((j) => j.projectedStatus === 'Projected Late') ? (
+              <li>
+                Some jobs are projected late — prioritize finishing partially completed work.
+              </li>
+            ) : (
+              <li>No projected late jobs at this snapshot.</li>
+            )}
+          </ul>
+        </div>
       </section>
 
       {/* Footer */}

@@ -51,6 +51,35 @@ body {
   font-weight: 300;
 }
 
+/* Header view toggle */
+.view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.view-toggle-btn {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.9);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.view-toggle-btn:hover {
+  transform: translateY(-2px);
+}
+
+.view-toggle-btn.active {
+  background: white;
+  color: #16213e;
+  border-color: rgba(0,0,0,0.08);
+  box-shadow: 0 6px 18px rgba(22,33,62,0.12);
+}
+
 /* ============================================================================
    MAIN CONTAINER
    ============================================================================ */

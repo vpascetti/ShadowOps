@@ -462,7 +462,7 @@ function App() {
   const [sortOrder, setSortOrder] = useState('asc')
   const [statusFilter, setStatusFilter] = useState('All') // Filter by status: All | On Track | At Risk | Late
   const [workCenterFilter, setWorkCenterFilter] = useState('All') // Filter by work center
-  const [viewMode, setViewMode] = useState('dashboard') // 'dashboard' or 'briefing'
+  const [viewMode, setViewMode] = useState('briefing') // 'dashboard' or 'briefing'
 
   // Format date for display (YYYY-MM-DD format)
   const formatDateForInput = (date) => {
@@ -661,13 +661,13 @@ function App() {
                 className={`view-toggle-btn ${viewMode === 'briefing' ? 'active' : ''}`}
                 onClick={() => setViewMode('briefing')}
               >
-                Daily Briefing
+                Executive Briefing
               </button>
               <button
                 className={`view-toggle-btn ${viewMode === 'dashboard' ? 'active' : ''}`}
                 onClick={() => setViewMode('dashboard')}
               >
-                Dashboard
+                Operational Dashboard
               </button>
             </div>
           </div>

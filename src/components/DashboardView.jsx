@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import StatusPill from './StatusPill';
 import ProgressBar from './ProgressBar';
 import MetricCard from './MetricCard';
@@ -50,6 +50,34 @@ export default function DashboardView({
     { label: 'Bottlenecks', ref: bottlenecksRef },
     { label: 'Jobs Table', ref: jobsTableRef },
   ];
+
+  const [activeSection, setActiveSection] = useState('Alerts');
+
+  useEffect(() => {
+    const refs = [alertsRef, runListRef, loadSummaryRef, bottlenecksRef, jobsTableRef];
+    const observerOptions = {
+      root: null,
+      rootMargin: '-40% 0px -40% 0px',
+      threshold: 0,
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const match = sections.find((s) => s.ref.current === entry.target);
+          if (match) setActiveSection(match.label);
+        }
+      });
+    }, observerOptions);
+
+    refs.forEach((r) => {
+      if (r && r.current) observer.observe(r.current);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   return (
     <div className="dashboard-view">
@@ -158,7 +186,7 @@ export default function DashboardView({
               </div>
 
               {/* Section Navigation Bar */}
-              <SectionNavBar sections={sections} />
+              <SectionNavBar sections={sections} activeLabel={activeSection} />
 
               {/* Alerts Panel */}
               <div ref={alertsRef}>
