@@ -486,9 +486,20 @@ function App() {
         method: 'POST',
         body: fd,
       })
-      const uploadJson = await uploadRes.json()
-      if (!uploadJson.ok) {
-        alert('Upload failed: ' + (uploadJson.error || uploadJson.message || JSON.stringify(uploadJson)))
+
+      let uploadJson = null
+      try {
+        // Try parse JSON; if the response is empty or invalid, we'll handle below
+        uploadJson = await uploadRes.json()
+      } catch (parseErr) {
+        const text = await uploadRes.text().catch(() => '')
+        const msg = text || parseErr.message || 'Empty or invalid JSON response from server'
+        alert('Upload failed: ' + msg)
+        return
+      }
+
+      if (!uploadRes.ok || !uploadJson || !uploadJson.ok) {
+        alert('Upload failed: ' + (uploadJson?.error || uploadJson?.message || 'Server returned an error'))
         return
       }
 
