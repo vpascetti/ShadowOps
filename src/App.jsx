@@ -488,18 +488,27 @@ function App() {
       })
 
       let uploadJson = null
+      let respText = ''
       try {
-        // Try parse JSON; if the response is empty or invalid, we'll handle below
-        uploadJson = await uploadRes.json()
-      } catch (parseErr) {
-        const text = await uploadRes.text().catch(() => '')
-        const msg = text || parseErr.message || 'Empty or invalid JSON response from server'
-        alert('Upload failed: ' + msg)
+        respText = await uploadRes.text()
+        try {
+          uploadJson = respText ? JSON.parse(respText) : null
+        } catch (parseErr) {
+          console.error('Failed to parse upload response as JSON', parseErr, respText)
+        }
+      } catch (err) {
+        console.error('Failed to read upload response text', err)
+      }
+
+      if (!uploadRes.ok) {
+        const errMsg = uploadJson?.error || uploadJson?.message || respText || `HTTP ${uploadRes.status}`
+        alert('Upload failed: ' + errMsg)
         return
       }
 
-      if (!uploadRes.ok || !uploadJson || !uploadJson.ok) {
-        alert('Upload failed: ' + (uploadJson?.error || uploadJson?.message || 'Server returned an error'))
+      if (!uploadJson || !uploadJson.ok) {
+        const errMsg = uploadJson?.error || uploadJson?.message || respText || 'Unknown server response'
+        alert('Upload failed: ' + errMsg)
         return
       }
 

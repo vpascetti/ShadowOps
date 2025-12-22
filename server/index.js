@@ -104,6 +104,13 @@ app.get('/api/jobs', async (req, res) => {
   }
 })
 
+// Global error handler to ensure JSON responses on unexpected errors
+app.use((err, req, res, next) => {
+  console.error('Unhandled server error', err)
+  if (res.headersSent) return next(err)
+  res.status(500).json({ ok: false, error: err?.message || 'Internal server error' })
+})
+
 // Start
 initDB()
   .then(() => {
