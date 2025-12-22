@@ -35,6 +35,7 @@ export default function DashboardView({
   handleApplyDate,
   parseDate,
   handleFileUpload,
+  uploadLoading,
 }) {
   // Create refs for section navigation
   const alertsRef = useRef(null);
@@ -96,9 +97,13 @@ export default function DashboardView({
               id="csv-file-input"
               onChange={handleFileUpload}
               style={{ display: 'none' }}
+              disabled={uploadLoading}
             />
-            <label htmlFor="csv-file-input" className="file-input-label">
-              Choose CSV File
+            <label
+              htmlFor="csv-file-input"
+              className={`file-input-label ${uploadLoading ? 'loading' : ''}`}
+            >
+              {uploadLoading ? 'Uploading…' : 'Choose CSV File'}
             </label>
             {fileName && <p className="file-name">Loaded: {fileName}</p>}
           </div>
@@ -189,22 +194,22 @@ export default function DashboardView({
               <SectionNavBar sections={sections} activeLabel={activeSection} />
 
               {/* Alerts Panel */}
-              <div ref={alertsRef}>
+              <section ref={alertsRef}>
                 <AlertsPanel alerts={alerts} />
-              </div>
+              </section>
 
               {/* Run List Panel */}
-              <div ref={runListRef}>
+              <section ref={runListRef}>
                 <RunListPanel runList={runList} />
-              </div>
+              </section>
 
               {/* Load Summary Panel */}
-              <div ref={loadSummaryRef}>
+              <section ref={loadSummaryRef}>
                 <LoadSummaryPanel loadSummary={loadSummary} />
-              </div>
+              </section>
 
               {/* Work Center Summary */}
-              <div ref={bottlenecksRef}>
+              <section ref={bottlenecksRef}>
                 {workCenterSummary.length > 0 && (
                   <div className="work-center-summary">
                     <h3>Work Center Bottlenecks</h3>
@@ -231,10 +236,10 @@ export default function DashboardView({
                     </div>
                   </div>
                 )}
-              </div>
+              </section>
 
               {/* Jobs Table */}
-              <div ref={jobsTableRef} className="table-wrapper">
+              <section ref={jobsTableRef} className="table-wrapper">
                 <table className="jobs-table">
                   <thead>
                     <tr>
@@ -319,7 +324,7 @@ export default function DashboardView({
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </section>
             </>
           ) : (
             <div className="empty-state">

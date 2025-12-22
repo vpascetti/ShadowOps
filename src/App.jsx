@@ -7,7 +7,7 @@ import JobTimeline from './components/JobTimeline'
 import AlertsPanel from './components/AlertsPanel'
 import RunListPanel from './components/RunListPanel'
 import LoadSummaryPanel from './components/LoadSummaryPanel'
-import DailyBriefing from './components/DailyBriefing'
+import ExecutiveBriefing from './components/ExecutiveBriefing'
 import DashboardView from './components/DashboardView'
 
 // ============================================================================
@@ -458,6 +458,7 @@ function App() {
   const [selectedDate, setSelectedDate] = useState('') // Store date input value (YYYY-MM-DD format)
   const [asOfDate, setAsOfDate] = useState(new Date()) // The actual date used for calculations (defaults to today)
   const [fileName, setFileName] = useState('')
+  const [uploadLoading, setUploadLoading] = useState(false)
   const [sortField, setSortField] = useState('Job')
   const [sortOrder, setSortOrder] = useState('asc')
   const [statusFilter, setStatusFilter] = useState('All') // Filter by status: All | On Track | At Risk | Late
@@ -477,6 +478,7 @@ function App() {
     if (!file) return
 
     setFileName(file.name)
+    setUploadLoading(true)
 
     try {
       const fd = new FormData()
@@ -542,6 +544,8 @@ function App() {
     } catch (err) {
       console.error(err)
       alert('Error uploading file: ' + err.message)
+    } finally {
+      setUploadLoading(false)
     }
   }
 
@@ -695,13 +699,12 @@ function App() {
       </header>
 
       {viewMode === 'briefing' ? (
-        <DailyBriefing
+        <ExecutiveBriefing
           metrics={metrics}
           alerts={alerts}
           runList={runList}
           loadSummary={loadSummary}
           asOfDate={asOfDate}
-          jobs={jobs}
         />
       ) : (
         <DashboardView
@@ -730,6 +733,7 @@ function App() {
           handleApplyDate={handleApplyDate}
           parseDate={parseDate}
           handleFileUpload={handleFileUpload}
+          uploadLoading={uploadLoading}
         />
       )}
     </div>

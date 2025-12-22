@@ -771,3 +771,135 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Top toggle (alternate class names supported) */
+.top-toggle,
+.view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.top-toggle button,
+.view-toggle-btn {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.9);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.top-toggle button.active,
+.view-toggle-btn.active {
+  background: white;
+  color: #16213e;
+  border-color: rgba(0,0,0,0.08);
+}
+
+/* Section nav (simple) */
+.section-nav,
+.section-nav-bar {
+  margin: 1rem 0;
+}
+
+.section-nav button,
+.section-nav-button {
+  margin-right: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  cursor: pointer;
+}
+
+.section-nav button.active,
+.section-nav-button.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+/* Executive Briefing layout */
+.briefing-header {
+  background: white;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.briefing-header h2 {
+  margin: 0 0 0.25rem 0;
+}
+
+.briefing-sub {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.briefing-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 1000px) {
+  .briefing-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* file input loading state */
+.file-input-label.loading {
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.file-input-label.loading::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-top-color: rgba(0,0,0,0.45);
+  border-radius: 50%;
+  margin-left: 8px;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.briefing-section {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.briefing-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.risk-card,
+.hotspot-card {
+  padding: 0.75rem;
+  border: 1px solid #eef2ff;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.hotspot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.hotspot-severity.high { color: #b91c1c; font-weight:700 }
+.hotspot-severity.watch { color: #b45309; font-weight:700 }
+.hotspot-severity.healthy { color: #166534; font-weight:700 }
+
