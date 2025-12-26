@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "seed": "node seed_inventory.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

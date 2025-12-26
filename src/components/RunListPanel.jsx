@@ -32,7 +32,7 @@ export default function RunListPanel({ runList }) {
                     <span className="run-list-job-id">{job.Job}</span>
                     <span className="run-list-job-customer">{job.Customer || '—'}</span>
                   </div>
-                  <div className="run-list-job-dates">
+                  <div className="run-list-job-dates" title="Due date for this job">
                     <span className="run-list-due-date">{job.DueDate}</span>
                   </div>
                   <div className="run-list-job-status">
@@ -40,8 +40,9 @@ export default function RunListPanel({ runList }) {
                       {job.status}
                     </span>
                   </div>
-                  <div className="run-list-priority-score">
-                    {job.priorityScore.toFixed(0)}
+                  <div className="run-list-priority-score" title="Priority score (0-100): Higher = run first. Based on status, due date urgency, and progress.">
+                    <div className="priority-label">Priority</div>
+                    <div className="priority-value">{Math.min(100, job.priorityScore).toFixed(0)}</div>
                   </div>
                 </div>
               ))}

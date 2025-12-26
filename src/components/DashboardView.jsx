@@ -6,6 +6,7 @@ import JobTimeline from './JobTimeline';
 import AlertsPanel from './AlertsPanel';
 import RunListPanel from './RunListPanel';
 import LoadSummaryPanel from './LoadSummaryPanel';
+import MaterialShortagePanel from './MaterialShortagePanel';
 import SectionNavBar from './SectionNavBar';
 import '../styles/DashboardView.css';
 
@@ -41,21 +42,21 @@ export default function DashboardView({
   const alertsRef = useRef(null);
   const runListRef = useRef(null);
   const loadSummaryRef = useRef(null);
-  const bottlenecksRef = useRef(null);
+  const materialShortageRef = useRef(null);
   const jobsTableRef = useRef(null);
 
   const sections = [
     { label: 'Alerts', ref: alertsRef },
     { label: 'Run List', ref: runListRef },
     { label: 'Load Summary', ref: loadSummaryRef },
-    { label: 'Bottlenecks', ref: bottlenecksRef },
+    { label: 'Material Shortages', ref: materialShortageRef },
     { label: 'Jobs Table', ref: jobsTableRef },
   ];
 
   const [activeSection, setActiveSection] = useState('Alerts');
 
   useEffect(() => {
-    const refs = [alertsRef, runListRef, loadSummaryRef, bottlenecksRef, jobsTableRef];
+    const refs = [alertsRef, runListRef, loadSummaryRef, materialShortageRef, jobsTableRef];
     const observerOptions = {
       root: null,
       rootMargin: '-40% 0px -40% 0px',
@@ -133,10 +134,30 @@ export default function DashboardView({
             <>
               {/* Metrics Cards */}
               <div className="metrics-grid">
-                <MetricCard label="Total Jobs" value={metrics.total} color="neutral" />
-                <MetricCard label="On Track" value={metrics.onTrack} color="green" />
-                <MetricCard label="At Risk" value={metrics.atRisk} color="orange" />
-                <MetricCard label="Late" value={metrics.late} color="red" />
+                <MetricCard 
+                  label="Total Jobs" 
+                  value={metrics.total} 
+                  color="neutral" 
+                  tooltip="Total number of jobs in the current filter"
+                />
+                <MetricCard 
+                  label="On Track" 
+                  value={metrics.onTrack} 
+                  color="green" 
+                  tooltip="Jobs progressing on schedule to meet their due date"
+                />
+                <MetricCard 
+                  label="At Risk" 
+                  value={metrics.atRisk} 
+                  color="orange" 
+                  tooltip="Jobs behind schedule (progress < time elapsed)"
+                />
+                <MetricCard 
+                  label="Late" 
+                  value={metrics.late} 
+                  color="red" 
+                  tooltip="Jobs past their due date"
+                />
               </div>
 
               {/* Filter Controls */}
@@ -208,34 +229,9 @@ export default function DashboardView({
                 <LoadSummaryPanel loadSummary={loadSummary} />
               </section>
 
-              {/* Work Center Summary */}
-              <section ref={bottlenecksRef}>
-                {workCenterSummary.length > 0 && (
-                  <div className="work-center-summary">
-                    <h3>Work Center Bottlenecks</h3>
-                    <div className="summary-cards">
-                      {workCenterSummary.map((wc) => (
-                        <div key={wc.workCenter} className="summary-card">
-                          <div className="summary-label">{wc.workCenter}</div>
-                          <div className="summary-stats">
-                            <div className="summary-stat">
-                              <span className="stat-label">Total</span>
-                              <span className="stat-value">{wc.totalJobs}</span>
-                            </div>
-                            <div className="summary-stat">
-                              <span className="stat-label">Late</span>
-                              <span className="stat-value late">{wc.lateJobs}</span>
-                            </div>
-                            <div className="summary-stat">
-                              <span className="stat-label">At Risk</span>
-                              <span className="stat-value at-risk">{wc.atRiskJobs}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              {/* Material Shortages Panel */}
+              <section ref={materialShortageRef}>
+                <MaterialShortagePanel jobs={filteredJobs} />
               </section>
 
               {/* Jobs Table */}

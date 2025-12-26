@@ -19,24 +19,24 @@ export default function LoadSummaryPanel({ loadSummary }) {
                 </span>
               </div>
               <div className="load-summary-stats">
-                <div className="load-stat">
+                <div className="load-stat" title="Total jobs currently loaded on this work center">
                   <span className="load-stat-label">Total</span>
                   <span className="load-stat-value">{wc.totalJobs}</span>
                 </div>
-                <div className="load-stat">
+                <div className="load-stat" title="Jobs that are already past their due date">
                   <span className="load-stat-label">Late</span>
                   <span className="load-stat-value late">{wc.lateJobs}</span>
                 </div>
-                <div className="load-stat">
+                <div className="load-stat" title="Jobs projected to finish after their due date">
                   <span className="load-stat-label">Proj. Late</span>
                   <span className="load-stat-value projected-late">{wc.projectedLateJobs}</span>
                 </div>
-                <div className="load-stat">
+                <div className="load-stat" title="Jobs behind schedule and at risk of being late">
                   <span className="load-stat-label">At Risk</span>
                   <span className="load-stat-value at-risk">{wc.atRiskJobs}</span>
                 </div>
               </div>
-              <div className="load-summary-score">
+              <div className="load-summary-score" title="Load Score">
                 <span>Score: {wc.loadScore}</span>
               </div>
             </div>

@@ -9,6 +9,8 @@
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border-left: 4px solid #2563eb;
+  max-height: 600px;
+  overflow-y: auto;
 }
 
 .run-list-title {
@@ -130,10 +132,25 @@
 }
 
 .run-list-priority-score {
-  text-align: right;
-  font-weight: 600;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.priority-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: #666;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.priority-value {
+  font-weight: 700;
   color: #2563eb;
-  font-size: 0.85rem;
+  font-size: 1.1rem;
 }
 
 @media (max-width: 1024px) {

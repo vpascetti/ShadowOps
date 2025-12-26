@@ -1,19 +1,64 @@
-# React + Vite
+# ShadowOps
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Real-Time Manufacturing Intelligence for Your ERP**
 
-Currently, two official plugins are available:
+[![Demo Ready](https://img.shields.io/badge/status-demo%20ready-brightgreen)]()
+[![License](https://img.shields.io/badge/license-Proprietary-blue)]()
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 🚀 Quick Start (1 Command)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+./start.sh
+```
 
-## Expanding the ESLint configuration
+Then open **http://localhost:5173** in your browser.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+**That's it!** You now have:
+- ✅ PostgreSQL database running
+- ✅ Backend API server on port 5050
+- ✅ Frontend dashboard on port 5173
+- ✅ Sample manufacturing data loaded
+
+**To stop everything:**
+```bash
+./stop.sh
+```
+
+---
+
+## 📋 Manual Setup
+
+If you prefer manual control:
+
+```bash
+# 1. Start database
+docker-compose up -d
+
+# 2. Start backend (in one terminal)
+cd server
+npm install
+npm start
+
+# 3. Start frontend (in another terminal)
+npm install
+npm run dev
+```
+
+---
+
+## 🎯 For Pilot Customers
+
+**See [DEMO_GUIDE.md](./DEMO_GUIDE.md) for:**
+- Complete demo script
+- Feature highlights
+- Common questions & answers
+- Pricing and pilot program details
+
+---
+
+## What is ShadowOps?
 
 SHADOWOPS — PRODUCT SPECIFICATION (v1)
 A universal optimization layer for manufacturing ERP systems

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import './App.css'
 import StatusPill from './components/StatusPill'
 import ProgressBar from './components/ProgressBar'
@@ -229,6 +229,7 @@ function determineProjectedStatus(projectedCompletionDate, dueDate) {
 /**
  * Calculate priority score for job prioritization
  * Higher score = higher priority to run
+ * Score is 0-100 scale
  * Factors: status (Late/At Risk), projected status, days until due, progress
  */
 function calculatePriorityScore(job, asOfDate) {
@@ -236,34 +237,34 @@ function calculatePriorityScore(job, asOfDate) {
 
   // Critical: already late
   if (job.status === 'Late') {
-    score += 100
+    score += 60
   }
 
   // Warning: projected to be late
   if (job.projectedStatus === 'Projected Late') {
-    score += 80
+    score += 40
   }
 
   // At risk
   if (job.status === 'At Risk') {
-    score += 50
+    score += 30
   }
 
   // Days until due (sooner due date = higher priority)
   try {
     const dueDate = parseDate(job.DueDate)
     const daysToDue = Math.floor((dueDate.getTime() - asOfDate.getTime()) / (1000 * 60 * 60 * 24))
-    score += Math.max(0, 30 - daysToDue) // Jobs due within 30 days get bonus
+    score += Math.max(0, Math.min(20, 20 - daysToDue)) // Up to 20 points for urgency
   } catch (e) {
     // If date parsing fails, no adjustment
   }
 
   // Small boost for jobs already partially done (helps finish them quickly)
   if (job.progress !== null) {
-    score += job.progress * 20
+    score += job.progress * 10 // Up to 10 points
   }
 
-  return Math.max(0, score)
+  return Math.min(100, Math.max(0, score))
 }
 
 /**
@@ -454,7 +455,7 @@ function calculateMetrics(jobs) {
 // ============================================================================
 
 function App() {
-  const [rawJobs, setRawJobs] = useState([]) // Store raw CSV rows
+  const [rawJobs, setRawJobs] = useState([]) // Store raw CSV rows or API jobs
   const [selectedDate, setSelectedDate] = useState('') // Store date input value (YYYY-MM-DD format)
   const [asOfDate, setAsOfDate] = useState(new Date()) // The actual date used for calculations (defaults to today)
   const [fileName, setFileName] = useState('')
@@ -464,6 +465,8 @@ function App() {
   const [statusFilter, setStatusFilter] = useState('All') // Filter by status: All | On Track | At Risk | Late
   const [workCenterFilter, setWorkCenterFilter] = useState('All') // Filter by work center
   const [viewMode, setViewMode] = useState('briefing') // 'dashboard' or 'briefing'
+  const [dataSource, setDataSource] = useState('CSV') // 'CSV' or 'API'
+  const [apiError, setApiError] = useState(null)
 
   // Format date for display (YYYY-MM-DD format)
   const formatDateForInput = (date) => {
@@ -472,6 +475,40 @@ function App() {
     const day = String(date.getDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
   }
+
+  // Live Data Mode: fetch jobs from API on load or dashboard view
+  useEffect(() => {
+    if (viewMode === 'dashboard') {
+      setDataSource('API')
+      setApiError(null)
+      fetch('/api/demo/jobs')
+        .then(async (res) => {
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            throw new Error(err.error || 'API error')
+          }
+          return res.json()
+        })
+        .then((data) => {
+          // Map backend fields to frontend shape
+          const mapped = (data.jobs || []).map((r) => ({
+            Job: r.job,
+            WorkCenter: r.work_center,
+            StartDate: r.start_date,
+            DueDate: r.due_date,
+            QtyReleased: r.qty_released,
+            QtyCompleted: r.qty_completed,
+            // Optionally map more fields if needed
+          }))
+          setRawJobs(mapped)
+          setFileName('API: Live Data')
+        })
+        .catch((err) => {
+          setApiError(err.message)
+          setRawJobs([])
+        })
+    }
+  }, [viewMode])
 
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0]
@@ -514,8 +551,8 @@ function App() {
         return
       }
 
-      // Fetch jobs from backend
-      const jobsRes = await fetch('/api/jobs')
+      // Fetch jobs from backend (use demo endpoint for CSV uploads)
+      const jobsRes = await fetch('/api/demo/jobs')
       const jobsJson = await jobsRes.json()
       if (!jobsJson.ok) {
         alert('Failed fetching jobs from backend')
@@ -535,7 +572,7 @@ function App() {
       }))
 
       setRawJobs(mapped)
-
+      setDataSource('CSV')
       // Reset date to today when new file is loaded
       const todayDate = new Date()
       const todayFormatted = formatDateForInput(todayDate)
@@ -575,11 +612,12 @@ function App() {
   }, [jobs])
 
   // Compute work center summary (bottleneck analysis)
+  // Compute work center summary (bottleneck analysis) from filtered jobs
   const workCenterSummary = useMemo(() => {
     const summary = {}
     
     // Aggregate by work center
-    jobs.forEach(job => {
+    filteredJobs.forEach(job => {
       if (!job.WorkCenter) return
       
       if (!summary[job.WorkCenter]) {
@@ -602,22 +640,22 @@ function App() {
       if (b.atRiskJobs !== a.atRiskJobs) return b.atRiskJobs - a.atRiskJobs
       return b.totalJobs - a.totalJobs
     })
-  }, [jobs])
+  }, [filteredJobs])
 
-  // Compute alerts from all jobs (not just filtered)
+  // Compute alerts from filtered jobs
   const alerts = useMemo(() => {
-    return deriveAlerts(jobs)
-  }, [jobs])
+    return deriveAlerts(filteredJobs)
+  }, [filteredJobs])
 
-  // Compute run list from all jobs (not just filtered)
+  // Compute run list from filtered jobs
   const runList = useMemo(() => {
-    return deriveRunList(jobs, asOfDate)
-  }, [jobs, asOfDate])
+    return deriveRunList(filteredJobs, asOfDate)
+  }, [filteredJobs, asOfDate])
 
-  // Compute load summary from all jobs (not just filtered)
+  // Compute load summary from filtered jobs
   const loadSummary = useMemo(() => {
-    return deriveLoadSummary(jobs)
-  }, [jobs])
+    return deriveLoadSummary(filteredJobs)
+  }, [filteredJobs])
 
   // Handle sorting
   const handleSort = (field) => {
@@ -694,9 +732,18 @@ function App() {
                 Operational Dashboard
               </button>
             </div>
+            <div className="data-source-label" style={{ marginLeft: 24, fontWeight: 500, color: '#2b7' }}>
+              Data Source: {dataSource === 'API' ? 'Local API' : 'CSV'}
+            </div>
           </div>
         </div>
       </header>
+
+      {apiError && (
+        <div style={{ color: 'red', fontWeight: 600, margin: '1em' }}>
+          Error loading jobs from API: {apiError}
+        </div>
+      )}
 
       {viewMode === 'briefing' ? (
         <ExecutiveBriefing
