@@ -43,15 +43,33 @@ function getRootCauseAndAccountability(job, asOfDate) {
     daysUntilDue = 0;
   }
   
+  // Check if this looks like a material shortage (low/no progress despite time elapsed)
+  const likelyMaterialShortage = progress < 0.1 && scheduleRatio > 0.2;
+  
   // Already late
   if (job.status === 'Late') {
     if (progress === 0) {
+      // No progress at all - check if it's material or planning issue
+      if (scheduleRatio > 0.3) {
+        return {
+          issue: 'Material Shortage',
+          responsible: 'Procurement',
+          action: 'Expedite material orders immediately'
+        };
+      }
       return {
         issue: 'Not Started',
         responsible: 'Production Supervisor',
         action: 'Expedite job release and staffing'
       };
     } else if (progress < 0.3) {
+      if (likelyMaterialShortage) {
+        return {
+          issue: 'Material Shortage',
+          responsible: 'Procurement',
+          action: 'Critical material needed ASAP'
+        };
+      }
       return {
         issue: 'Minimal Progress',
         responsible: 'Production Supervisor',
@@ -71,10 +89,24 @@ function getRootCauseAndAccountability(job, asOfDate) {
     const gap = scheduleRatio - progress;
     
     if (progress === 0) {
+      // No progress - likely material or release delay
+      if (scheduleRatio > 0.15) {
+        return {
+          issue: 'Material Shortage',
+          responsible: 'Procurement',
+          action: 'Verify material delivery status'
+        };
+      }
       return {
         issue: 'Delayed Start',
         responsible: 'Production Planner',
         action: 'Investigate release delays'
+      };
+    } else if (likelyMaterialShortage) {
+      return {
+        issue: 'Material Shortage',
+        responsible: 'Procurement',
+        action: 'Expedite material availability'
       };
     } else if (gap > 0.5) {
       return {
@@ -84,9 +116,9 @@ function getRootCauseAndAccountability(job, asOfDate) {
       };
     } else if (progress < 0.5 && daysUntilDue < 7) {
       return {
-        issue: 'Material Shortage Risk',
-        responsible: 'Purchasing/Inventory',
-        action: 'Verify material availability'
+        issue: 'Material Risk',
+        responsible: 'Procurement/Inventory',
+        action: 'Verify material for completion'
       };
     } else {
       return {
@@ -99,7 +131,13 @@ function getRootCauseAndAccountability(job, asOfDate) {
   
   // Projected Late but currently on track
   if (job.projectedStatus === 'Projected Late' && job.status !== 'Late') {
-    if (progress < 0.3) {
+    if (likelyMaterialShortage) {
+      return {
+        issue: 'Material Shortage',
+        responsible: 'Procurement',
+        action: 'Material needed for acceleration'
+      };
+    } else if (progress < 0.3) {
       return {
         issue: 'Slow Initial Progress',
         responsible: 'Production Supervisor',
@@ -171,6 +209,151 @@ export default function DashboardView({
   const loadSummaryRef = useRef(null);
   const materialShortageRef = useRef(null);
   const jobsTableRef = useRef(null);
+
+  // Define default column order
+  const defaultColumns = [
+    { id: 'Job', label: 'Job', sortable: true },
+    { id: 'Part', label: 'Part', sortable: false },
+    { id: 'Customer', label: 'Customer', sortable: false },
+    { id: 'WorkCenter', label: 'WorkCenter', sortable: false },
+    { id: 'StartDate', label: 'StartDate', sortable: false },
+    { id: 'DueDate', label: 'DueDate', sortable: true },
+    { id: 'QtyReleased', label: 'QtyReleased', sortable: false },
+    { id: 'QtyCompleted', label: 'QtyCompleted', sortable: false },
+    { id: 'Progress', label: 'Progress', sortable: false },
+    { id: 'Status', label: 'Status', sortable: false },
+    { id: 'Reason', label: 'Reason', sortable: false },
+    { id: 'RootCause', label: 'Root Cause', sortable: false },
+    { id: 'Accountable', label: 'Accountable', sortable: false },
+    { id: 'Projected', label: 'Projected', sortable: false },
+    { id: 'Timeline', label: 'Timeline', sortable: false },
+  ];
+
+  // State for column order and dragging
+  const [columnOrder, setColumnOrder] = useState(defaultColumns);
+  const [draggedColumn, setDraggedColumn] = useState(null);
+  
+  // Drag handlers
+  const handleDragStart = (e, index) => {
+    setDraggedColumn(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedColumn === null || draggedColumn === index) return;
+    
+    const newOrder = [...columnOrder];
+    const draggedItem = newOrder[draggedColumn];
+    newOrder.splice(draggedColumn, 1);
+    newOrder.splice(index, 0, draggedItem);
+    
+    setColumnOrder(newOrder);
+    setDraggedColumn(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedColumn(null);
+  };
+
+  // Function to render cell content based on column ID
+  const renderCell = (columnId, job) => {
+    switch (columnId) {
+      case 'Job':
+        return job.Job || '—';
+      case 'Part':
+        return job.Part || '—';
+      case 'Customer':
+        return job.Customer || '—';
+      case 'WorkCenter':
+        return job.WorkCenter || '—';
+      case 'StartDate':
+        return formatDate(job.StartDate);
+      case 'DueDate':
+        return formatDate(job.DueDate);
+      case 'QtyReleased':
+        return job.QtyReleased || '—';
+      case 'QtyCompleted':
+        return job.QtyCompleted || '—';
+      case 'Progress':
+        return (
+          <div className="progress-cell">
+            {job.progress !== null ? (
+              <>
+                <ProgressBar value={job.progress} />
+                <span className="progress-text">
+                  {(job.progress * 100).toFixed(0)}%
+                </span>
+              </>
+            ) : (
+              '—'
+            )}
+          </div>
+        );
+      case 'Status':
+        return <StatusPill status={job.status} />;
+      case 'Reason':
+        return (
+          <div className="reason-cell">
+            <span className="reason-text">{getJobReason(job, asOfDate)}</span>
+          </div>
+        );
+      case 'RootCause':
+        return (
+          <div className="root-cause-cell">
+            <span className="issue-text">{getRootCauseAndAccountability(job, asOfDate).issue}</span>
+          </div>
+        );
+      case 'Accountable':
+        return (
+          <div className="accountability-cell">
+            <div className="accountability-info">
+              <div className="responsible">{getRootCauseAndAccountability(job, asOfDate).responsible}</div>
+              <div className="action-needed">{getRootCauseAndAccountability(job, asOfDate).action}</div>
+            </div>
+          </div>
+        );
+      case 'Projected':
+        return (
+          <div className="projected-cell">
+            <div className="projected-status">
+              {job.projectedStatus === 'Projected Late' && (
+                <span className="projected-late">Late</span>
+              )}
+              {job.projectedStatus === 'On Pace' && (
+                <span className="projected-on-pace">On Pace</span>
+              )}
+              {job.projectedStatus === 'Projected Early' && (
+                <span className="projected-early">Early</span>
+              )}
+              {job.projectedStatus === 'Unknown' && (
+                <span className="projected-unknown">Unknown</span>
+              )}
+            </div>
+            <div className="projected-date">
+              {job.projectedCompletionDate
+                ? job.projectedCompletionDate
+                    .toISOString()
+                    .split('T')[0]
+                : '—'}
+            </div>
+          </div>
+        );
+      case 'Timeline':
+        return (
+          <div className="timeline-cell">
+            <JobTimeline
+              startDate={parseDate(job.StartDate)}
+              dueDate={parseDate(job.DueDate)}
+              projectedDate={job.projectedCompletionDate}
+              asOfDate={asOfDate}
+            />
+          </div>
+        );
+      default:
+        return '—';
+    }
+  };
 
   const sections = [
     { label: 'Alerts', ref: alertsRef },
@@ -363,101 +546,34 @@ export default function DashboardView({
 
               {/* Jobs Table */}
               <section ref={jobsTableRef} className="table-wrapper">
+                <div className="column-reorder-hint">💡 Drag column headers to reorder</div>
                 <table className="jobs-table">
                   <thead>
                     <tr>
-                      <th onClick={() => handleSort('Job')} className="sortable">
-                        Job {sortField === 'Job' && (sortOrder === 'asc' ? '▲' : '▼')}
-                      </th>
-                      <th>Part</th>
-                      <th>Customer</th>
-                      <th>WorkCenter</th>
-                      <th>StartDate</th>
-                      <th onClick={() => handleSort('DueDate')} className="sortable">
-                        DueDate {sortField === 'DueDate' && (sortOrder === 'asc' ? '▲' : '▼')}
-                      </th>
-                      <th>QtyReleased</th>
-                      <th>QtyCompleted</th>
-                      <th>Progress</th>
-                      <th>Status</th>
-                      <th>Reason</th>
-                      <th>Root Cause</th>
-                      <th>Accountable</th>
-                      <th>Projected</th>
-                      <th>Timeline</th>
+                      {columnOrder.map((column, index) => (
+                        <th
+                          key={column.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, index)}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDragEnd={handleDragEnd}
+                          onClick={() => column.sortable && handleSort(column.id)}
+                          className={`${column.sortable ? 'sortable' : ''} ${draggedColumn === index ? 'dragging' : ''}`}
+                          style={{ cursor: 'move' }}
+                        >
+                          {column.label} {column.sortable && sortField === column.id && (sortOrder === 'asc' ? '▲' : '▼')}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {sortedJobs.map((job, idx) => (
                       <tr key={idx}>
-                        <td>{job.Job || '—'}</td>
-                        <td>{job.Part || '—'}</td>
-                        <td>{job.Customer || '—'}</td>
-                        <td>{job.WorkCenter || '—'}</td>
-                        <td>{formatDate(job.StartDate)}</td>
-                        <td>{formatDate(job.DueDate)}</td>
-                        <td>{job.QtyReleased || '—'}</td>
-                        <td>{job.QtyCompleted || '—'}</td>
-                        <td className="progress-cell">
-                          {job.progress !== null ? (
-                            <>
-                              <ProgressBar value={job.progress} />
-                              <span className="progress-text">
-                                {(job.progress * 100).toFixed(0)}%
-                              </span>
-                            </>
-                          ) : (
-                            '—'
-                          )}
-                        </td>
-                        <td>
-                          <StatusPill status={job.status} />
-                        </td>
-                        <td className="reason-cell">
-                          <span className="reason-text">{getJobReason(job, asOfDate)}</span>
-                        </td>
-                        <td className="root-cause-cell">
-                          <span className="issue-text">{getRootCauseAndAccountability(job, asOfDate).issue}</span>
-                        </td>
-                        <td className="accountability-cell">
-                          <div className="accountability-info">
-                            <div className="responsible">{getRootCauseAndAccountability(job, asOfDate).responsible}</div>
-                            <div className="action-needed">{getRootCauseAndAccountability(job, asOfDate).action}</div>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="projected-cell">
-                            <div className="projected-status">
-                              {job.projectedStatus === 'Projected Late' && (
-                                <span className="projected-late">Late</span>
-                              )}
-                              {job.projectedStatus === 'On Pace' && (
-                                <span className="projected-on-pace">On Pace</span>
-                              )}
-                              {job.projectedStatus === 'Projected Early' && (
-                                <span className="projected-early">Early</span>
-                              )}
-                              {job.projectedStatus === 'Unknown' && (
-                                <span className="projected-unknown">Unknown</span>
-                              )}
-                            </div>
-                            <div className="projected-date">
-                              {job.projectedCompletionDate
-                                ? job.projectedCompletionDate
-                                    .toISOString()
-                                    .split('T')[0]
-                                : '—'}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="timeline-cell">
-                          <JobTimeline
-                            startDate={parseDate(job.StartDate)}
-                            dueDate={parseDate(job.DueDate)}
-                            asOfDate={asOfDate}
-                            projectedCompletionDate={job.projectedCompletionDate}
-                          />
-                        </td>
+                        {columnOrder.map((column) => (
+                          <td key={column.id}>
+                            {renderCell(column.id, job)}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
