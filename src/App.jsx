@@ -273,6 +273,21 @@ function calculatePriorityScore(job, asOfDate) {
  */
 function deriveAlerts(jobs) {
   const alerts = []
+  
+  // Helper to format date as MM-DD-YYYY
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Unknown';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${month}-${day}-${year}`;
+    } catch (e) {
+      return dateStr;
+    }
+  };
 
   jobs.forEach((job) => {
     // Alert 1: Late Job (Critical)
@@ -281,7 +296,7 @@ function deriveAlerts(jobs) {
         id: `late-${job.Job}`,
         severity: 'critical',
         title: `Job ${job.Job} is LATE`,
-        description: `Due ${job.DueDate} on ${job.WorkCenter} (${job.Customer || 'N/A'})`,
+        description: `Due ${formatDate(job.DueDate)} on ${job.WorkCenter} (${job.Customer || 'N/A'})`,
         jobId: job.Job,
         workCenter: job.WorkCenter,
         dueDate: job.DueDate,
@@ -291,13 +306,13 @@ function deriveAlerts(jobs) {
     // Alert 2: Projected Late (Warning)
     if (job.projectedStatus === 'Projected Late') {
       const projectedStr = job.projectedCompletionDate
-        ? job.projectedCompletionDate.toISOString().split('T')[0]
+        ? formatDate(job.projectedCompletionDate.toISOString())
         : 'Unknown'
       alerts.push({
         id: `proj-late-${job.Job}`,
         severity: 'warning',
         title: `Job ${job.Job} projected LATE`,
-        description: `Projected ${projectedStr} > due ${job.DueDate}`,
+        description: `Projected ${projectedStr} > due ${formatDate(job.DueDate)}`,
         jobId: job.Job,
         workCenter: job.WorkCenter,
         dueDate: job.DueDate,

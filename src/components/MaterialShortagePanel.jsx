@@ -1,6 +1,21 @@
 import { useMemo } from 'react'
 import '../styles/MaterialShortagePanel.css'
 
+// Helper function to format dates as MM-DD-YYYY
+function formatDate(dateStr) {
+  if (!dateStr) return 'Unknown';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}-${day}-${year}`;
+  } catch (e) {
+    return dateStr;
+  }
+}
+
 export default function MaterialShortagePanel({ jobs }) {
   // Derive material shortage alerts from jobs
   const shortages = useMemo(() => {
@@ -83,7 +98,7 @@ export default function MaterialShortagePanel({ jobs }) {
               <div className="shortage-row">
                 <span className="shortage-label">Order By:</span>
                 <span className="shortage-value shortage-date">
-                  {shortage.dueDate} ({shortage.daysUntilDue} days)
+                  {formatDate(shortage.dueDate)} ({shortage.daysUntilDue} days)
                 </span>
               </div>
             </div>

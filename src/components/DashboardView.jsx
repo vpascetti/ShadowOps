@@ -10,6 +10,40 @@ import MaterialShortagePanel from './MaterialShortagePanel';
 import SectionNavBar from './SectionNavBar';
 import '../styles/DashboardView.css';
 
+// Helper function to generate reason text for job status
+function getJobReason(job, asOfDate) {
+  if (job.status === 'Late') {
+    return `Past due date (${formatDate(job.DueDate)})`;
+  }
+  
+  if (job.status === 'At Risk') {
+    const progressPct = job.progress !== null ? (job.progress * 100).toFixed(0) : '?';
+    const schedulePct = job.scheduleRatio !== null ? (job.scheduleRatio * 100).toFixed(0) : '?';
+    return `${progressPct}% done, ${schedulePct}% time elapsed`;
+  }
+  
+  if (job.projectedStatus === 'Projected Late' && job.status !== 'Late') {
+    return 'Current pace projects late completion';
+  }
+  
+  return '—';
+}
+
+// Helper function to format dates as MM-DD-YYYY
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr; // Return original if invalid
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}-${day}-${year}`;
+  } catch (e) {
+    return dateStr;
+  }
+}
+
 export default function DashboardView({
   jobs,
   filteredJobs,
@@ -253,6 +287,7 @@ export default function DashboardView({
                       <th>QtyCompleted</th>
                       <th>Progress</th>
                       <th>Status</th>
+                      <th>Reason</th>
                       <th>Projected</th>
                       <th>Timeline</th>
                     </tr>
@@ -264,8 +299,8 @@ export default function DashboardView({
                         <td>{job.Part || '—'}</td>
                         <td>{job.Customer || '—'}</td>
                         <td>{job.WorkCenter || '—'}</td>
-                        <td>{job.StartDate || '—'}</td>
-                        <td>{job.DueDate || '—'}</td>
+                        <td>{formatDate(job.StartDate)}</td>
+                        <td>{formatDate(job.DueDate)}</td>
                         <td>{job.QtyReleased || '—'}</td>
                         <td>{job.QtyCompleted || '—'}</td>
                         <td className="progress-cell">
@@ -282,6 +317,9 @@ export default function DashboardView({
                         </td>
                         <td>
                           <StatusPill status={job.status} />
+                        </td>
+                        <td className="reason-cell">
+                          <span className="reason-text">{getJobReason(job, asOfDate)}</span>
                         </td>
                         <td>
                           <div className="projected-cell">

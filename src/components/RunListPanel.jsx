@@ -1,5 +1,20 @@
 import '../styles/RunListPanel.css';
 
+// Helper function to format dates as MM-DD-YYYY
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}-${day}-${year}`;
+  } catch (e) {
+    return dateStr;
+  }
+}
+
 export default function RunListPanel({ runList }) {
   // Only show work centers with risky jobs (for clarity)
   const relevantWCs = runList.filter((wc) =>
@@ -33,7 +48,7 @@ export default function RunListPanel({ runList }) {
                     <span className="run-list-job-customer">{job.Customer || '—'}</span>
                   </div>
                   <div className="run-list-job-dates" title="Due date for this job">
-                    <span className="run-list-due-date">{job.DueDate}</span>
+                    <span className="run-list-due-date">{formatDate(job.DueDate)}</span>
                   </div>
                   <div className="run-list-job-status">
                     <span className={`run-list-status-badge status-${job.status.toLowerCase().replace(' ', '-')}`}>

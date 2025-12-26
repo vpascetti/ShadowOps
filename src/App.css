@@ -449,6 +449,14 @@ body {
   color: #333;
 }
 
+.reason-cell {
+  min-width: 180px;
+  max-width: 250px;
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+}
+
 .progress-cell {
   min-width: 120px;
 }
