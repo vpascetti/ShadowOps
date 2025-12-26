@@ -350,33 +350,19 @@ function deriveAlerts(jobs) {
 /**
  * Derive run list: prioritized jobs per work center
  * Returns array of { workCenter, jobs: [ ...sorted by priority ] }
+ * Jobs already have priorityScore assigned based on global ranking
  */
 function deriveRunList(jobs, asOfDate) {
-  // First, calculate raw priority scores for all jobs
-  const jobsWithRawScores = jobs.map((job) => ({
-    ...job,
-    rawPriorityScore: calculatePriorityScore(job, asOfDate),
-  }))
-
-  // Find the max raw score across all jobs
-  const maxScore = Math.max(...jobsWithRawScores.map((j) => j.rawPriorityScore), 1)
-
-  // Normalize scores to 0-100 range relative to the max
-  const jobsWithNormalizedScores = jobsWithRawScores.map((job) => ({
-    ...job,
-    priorityScore: Math.round((job.rawPriorityScore / maxScore) * 100),
-  }))
-
   // Group jobs by work center
   const jobsByWC = {}
-  jobsWithNormalizedScores.forEach((job) => {
+  jobs.forEach((job) => {
     if (!jobsByWC[job.WorkCenter]) {
       jobsByWC[job.WorkCenter] = []
     }
     jobsByWC[job.WorkCenter].push(job)
   })
 
-  // For each work center, sort by normalized priority score
+  // For each work center, sort by priority score (already calculated)
   const runList = Object.keys(jobsByWC)
     .map((wc) => {
       const wcJobs = jobsByWC[wc]
@@ -623,14 +609,21 @@ function App() {
       rawPriorityScore: calculatePriorityScore(job, asOfDate)
     }))
     
-    // Find the max raw score
-    const maxScore = Math.max(...jobsWithRawScores.map(j => j.rawPriorityScore), 1)
+    // Sort by raw score to establish ranking (highest to lowest)
+    jobsWithRawScores.sort((a, b) => b.rawPriorityScore - a.rawPriorityScore)
     
-    // Normalize scores to 0-100 range relative to the max
-    return jobsWithRawScores.map(job => ({
-      ...job,
-      priorityScore: Math.round((job.rawPriorityScore / maxScore) * 100)
-    }))
+    // Assign priority based on rank: top job = 100, then decrease
+    // Use linear distribution to spread out priorities
+    const totalJobs = jobsWithRawScores.length
+    return jobsWithRawScores.map((job, index) => {
+      // Priority decreases from 100 based on rank
+      // Top 10% get 90-100, next 10% get 80-90, etc.
+      const priorityScore = Math.max(1, Math.round(100 - (index / totalJobs) * 100))
+      return {
+        ...job,
+        priorityScore
+      }
+    })
   }, [rawJobs, asOfDate])
 
   // Filter jobs based on status and work center filters
