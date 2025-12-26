@@ -229,7 +229,7 @@ function determineProjectedStatus(projectedCompletionDate, dueDate) {
 /**
  * Calculate priority score for job prioritization
  * Higher score = higher priority to run
- * Score is 0-100 scale
+ * Returns raw score (will be normalized to 0-100 relative to max score)
  * Factors: status (Late/At Risk), projected status, days until due, progress
  */
 function calculatePriorityScore(job, asOfDate) {
@@ -264,7 +264,7 @@ function calculatePriorityScore(job, asOfDate) {
     score += job.progress * 10 // Up to 10 points
   }
 
-  return Math.min(100, Math.max(0, score))
+  return Math.max(0, score) // Return raw score (will be normalized later)
 }
 
 /**
@@ -352,22 +352,34 @@ function deriveAlerts(jobs) {
  * Returns array of { workCenter, jobs: [ ...sorted by priority ] }
  */
 function deriveRunList(jobs, asOfDate) {
+  // First, calculate raw priority scores for all jobs
+  const jobsWithRawScores = jobs.map((job) => ({
+    ...job,
+    rawPriorityScore: calculatePriorityScore(job, asOfDate),
+  }))
+
+  // Find the max raw score across all jobs
+  const maxScore = Math.max(...jobsWithRawScores.map((j) => j.rawPriorityScore), 1)
+
+  // Normalize scores to 0-100 range relative to the max
+  const jobsWithNormalizedScores = jobsWithRawScores.map((job) => ({
+    ...job,
+    priorityScore: Math.round((job.rawPriorityScore / maxScore) * 100),
+  }))
+
   // Group jobs by work center
   const jobsByWC = {}
-  jobs.forEach((job) => {
+  jobsWithNormalizedScores.forEach((job) => {
     if (!jobsByWC[job.WorkCenter]) {
       jobsByWC[job.WorkCenter] = []
     }
     jobsByWC[job.WorkCenter].push(job)
   })
 
-  // For each work center, add priority score and sort
+  // For each work center, sort by normalized priority score
   const runList = Object.keys(jobsByWC)
     .map((wc) => {
-      const wcJobs = jobsByWC[wc].map((job) => ({
-        ...job,
-        priorityScore: calculatePriorityScore(job, asOfDate),
-      }))
+      const wcJobs = jobsByWC[wc]
       // Sort by priority score descending
       wcJobs.sort((a, b) => b.priorityScore - a.priorityScore)
       return { workCenter: wc, jobs: wcJobs }
@@ -604,10 +616,20 @@ function App() {
   // Recompute jobs whenever rawJobs or asOfDate changes
   const jobs = useMemo(() => {
     const enrichedJobs = rawJobs.map(row => enrichJob(row, asOfDate))
-    // Add priority scores to each job
-    return enrichedJobs.map(job => ({
+    
+    // Calculate raw priority scores for all jobs
+    const jobsWithRawScores = enrichedJobs.map(job => ({
       ...job,
-      priorityScore: calculatePriorityScore(job, asOfDate)
+      rawPriorityScore: calculatePriorityScore(job, asOfDate)
+    }))
+    
+    // Find the max raw score
+    const maxScore = Math.max(...jobsWithRawScores.map(j => j.rawPriorityScore), 1)
+    
+    // Normalize scores to 0-100 range relative to the max
+    return jobsWithRawScores.map(job => ({
+      ...job,
+      priorityScore: Math.round((job.rawPriorityScore / maxScore) * 100)
     }))
   }, [rawJobs, asOfDate])
 
