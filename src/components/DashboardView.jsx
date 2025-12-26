@@ -29,6 +29,99 @@ function getJobReason(job, asOfDate) {
   return '—';
 }
 
+// Helper function to determine root cause and accountability
+function getRootCauseAndAccountability(job, asOfDate) {
+  const progress = job.progress !== null ? job.progress : 0;
+  const scheduleRatio = job.scheduleRatio !== null ? job.scheduleRatio : 0;
+  
+  // Calculate days until due
+  let daysUntilDue = 0;
+  try {
+    const dueDate = new Date(job.DueDate);
+    daysUntilDue = Math.floor((dueDate - asOfDate) / (1000 * 60 * 60 * 24));
+  } catch (e) {
+    daysUntilDue = 0;
+  }
+  
+  // Already late
+  if (job.status === 'Late') {
+    if (progress === 0) {
+      return {
+        issue: 'Not Started',
+        responsible: 'Production Supervisor',
+        action: 'Expedite job release and staffing'
+      };
+    } else if (progress < 0.3) {
+      return {
+        issue: 'Minimal Progress',
+        responsible: 'Production Supervisor',
+        action: 'Review capacity and prioritize'
+      };
+    } else {
+      return {
+        issue: 'Slow Completion Rate',
+        responsible: 'Production Supervisor',
+        action: 'Add resources or overtime'
+      };
+    }
+  }
+  
+  // At Risk - behind schedule
+  if (job.status === 'At Risk') {
+    const gap = scheduleRatio - progress;
+    
+    if (progress === 0) {
+      return {
+        issue: 'Delayed Start',
+        responsible: 'Production Planner',
+        action: 'Investigate release delays'
+      };
+    } else if (gap > 0.5) {
+      return {
+        issue: 'Severe Schedule Slip',
+        responsible: 'Production Manager',
+        action: 'Immediate intervention required'
+      };
+    } else if (progress < 0.5 && daysUntilDue < 7) {
+      return {
+        issue: 'Material Shortage Risk',
+        responsible: 'Purchasing/Inventory',
+        action: 'Verify material availability'
+      };
+    } else {
+      return {
+        issue: 'Below Target Pace',
+        responsible: 'Production Supervisor',
+        action: 'Increase throughput'
+      };
+    }
+  }
+  
+  // Projected Late but currently on track
+  if (job.projectedStatus === 'Projected Late' && job.status !== 'Late') {
+    if (progress < 0.3) {
+      return {
+        issue: 'Slow Initial Progress',
+        responsible: 'Production Supervisor',
+        action: 'Accelerate completion rate'
+      };
+    } else {
+      return {
+        issue: 'Insufficient Velocity',
+        responsible: 'Production Supervisor',
+        action: 'Improve daily output'
+      };
+    }
+  }
+  
+  // On track - no issues
+  return {
+    issue: '—',
+    responsible: '—',
+    action: '—'
+  };
+}
+
 // Helper function to format dates as MM-DD-YYYY
 function formatDate(dateStr) {
   if (!dateStr) return '—';
@@ -288,6 +381,8 @@ export default function DashboardView({
                       <th>Progress</th>
                       <th>Status</th>
                       <th>Reason</th>
+                      <th>Root Cause</th>
+                      <th>Accountable</th>
                       <th>Projected</th>
                       <th>Timeline</th>
                     </tr>
@@ -320,6 +415,15 @@ export default function DashboardView({
                         </td>
                         <td className="reason-cell">
                           <span className="reason-text">{getJobReason(job, asOfDate)}</span>
+                        </td>
+                        <td className="root-cause-cell">
+                          <span className="issue-text">{getRootCauseAndAccountability(job, asOfDate).issue}</span>
+                        </td>
+                        <td className="accountability-cell">
+                          <div className="accountability-info">
+                            <div className="responsible">{getRootCauseAndAccountability(job, asOfDate).responsible}</div>
+                            <div className="action-needed">{getRootCauseAndAccountability(job, asOfDate).action}</div>
+                          </div>
                         </td>
                         <td>
                           <div className="projected-cell">

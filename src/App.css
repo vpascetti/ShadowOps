@@ -457,6 +457,40 @@ body {
   font-style: italic;
 }
 
+.root-cause-cell {
+  min-width: 140px;
+  max-width: 200px;
+}
+
+.issue-text {
+  font-size: 0.9rem;
+  color: #d97706;
+  font-weight: 600;
+}
+
+.accountability-cell {
+  min-width: 200px;
+  max-width: 280px;
+}
+
+.accountability-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.accountability-info .responsible {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.accountability-info .action-needed {
+  font-size: 0.8rem;
+  color: #666;
+  font-style: italic;
+}
+
 .progress-cell {
   min-width: 120px;
 }
