@@ -9,6 +9,7 @@ import AlertsPanel from './components/AlertsPanel'
 import RunListPanel from './components/RunListPanel'
 import LoadSummaryPanel from './components/LoadSummaryPanel'
 import SuggestedActionsPanel from './components/SuggestedActionsPanel'
+import MachineHealthPanel from './components/MachineHealthPanel'
 import ExecutiveBriefing from './components/ExecutiveBriefing'
 import DashboardView from './components/DashboardView'
 
@@ -594,6 +595,7 @@ export default function LegacyDashboard({ onExit }) {
             loadSummary={loadSummary}
             asOfDate={asOfDate}
           />
+          <MachineHealthPanel jobs={jobs} />
           <SuggestedActionsPanel jobs={jobs} />
         </>
       ) : (
