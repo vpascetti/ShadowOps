@@ -8,6 +8,7 @@ import JobTimeline from './components/JobTimeline'
 import AlertsPanel from './components/AlertsPanel'
 import RunListPanel from './components/RunListPanel'
 import LoadSummaryPanel from './components/LoadSummaryPanel'
+import SuggestedActionsPanel from './components/SuggestedActionsPanel'
 import ExecutiveBriefing from './components/ExecutiveBriefing'
 import DashboardView from './components/DashboardView'
 
@@ -585,13 +586,16 @@ export default function LegacyDashboard({ onExit }) {
       )}
 
       {viewMode === 'briefing' ? (
-        <ExecutiveBriefing
-          metrics={metrics}
-          alerts={alerts}
-          runList={runList}
-          loadSummary={loadSummary}
-          asOfDate={asOfDate}
-        />
+        <>
+          <ExecutiveBriefing
+            metrics={metrics}
+            alerts={alerts}
+            runList={runList}
+            loadSummary={loadSummary}
+            asOfDate={asOfDate}
+          />
+          <SuggestedActionsPanel jobs={jobs} />
+        </>
       ) : (
         <DashboardView
           jobs={jobs}
