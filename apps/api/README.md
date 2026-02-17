@@ -1,82 +1,167 @@
-# ShadowOps Backend (Local API Mode)
+# ShadowOps API
+
+**Real-time manufacturing intelligence backend with ERP integration**
 
 ## Prerequisites
 - Docker (for Postgres)
 - Node.js 18+
+- Oracle Instant Client (for IQMS integration - optional)
 
-## Setup & Run (Development)
+## Quick Start
 
-1. **Start Postgres via Docker Compose**
+From the workspace root, use the convenience script:
 
+```bash
+./start.sh
 ```
+
+This starts Postgres, backend API (port 5050), and frontend (port 5173).
+
+## Manual Setup
+
+1. **Start Postgres via Docker Compose** (from workspace root)
+
+```bash
 docker compose up -d
 ```
 
 2. **Configure environment variables**
 
-- Copy `.env.example` to `.env` in `/server` and fill in secrets as needed.
-- The default DB user/password is set for local dev.
-
-3. **Install backend dependencies**
-
+```bash
+cd apps/api
+cp .env.example .env
+# Edit .env as needed
 ```
-cd server
+
+3. **Install dependencies**
+
+```bash
 npm install
 ```
 
 4. **Run the backend server**
 
-```
+```bash
 npm run dev
 ```
 
-- The server runs on port 5050 by default.
+Server runs on port 5050 by default.
 
-5. **Frontend setup**
+## Data Providers
 
-- Copy `.env.example` to `.env` in the root and set `VITE_TENANT_TOKEN` (see below).
-- Install frontend deps:
+ShadowOps supports multiple data providers via the `DATA_PROVIDER` environment variable:
 
+### Stub Provider (Default)
+```bash
+DATA_PROVIDER=stub
 ```
-npm install
+- Uses fixture data from `stubFixtures.json`
+- Perfect for development and demos
+- No external dependencies
+
+### IQMS Provider (Oracle)
+```bash
+DATA_PROVIDER=iqms
+IQMS_CONNECTOR=oracle
+```
+- Connects directly to IQMS Oracle database
+- Requires Oracle Instant Client
+- SQL queries in `sql/iqms_*.sql`
+- See "IQMS Integration" section below
+
+### Database Provider (Postgres)
+```bash
+DATA_PROVIDER=db
+```
+- Uses local Postgres database
+- Accepts CSV imports via API
+- Persistent storage
+
+## IQMS Integration
+
+### Prerequisites
+
+1. **Oracle Instant Client**
+   - Download from [Oracle Instant Client Downloads](https://www.oracle.com/database/technologies/instant-client/downloads.html)
+   - Extract to a local directory (e.g., `/opt/oracle/instantclient_19_14`)
+
+2. **Environment Variables**
+
+```bash
+# IQMS connection
+IQMS_HOST=your-iqms-host
+IQMS_PORT=1521
+IQMS_SERVICE=IQORA
+IQMS_USER=IQMS
+IQMS_PASSWORD=your-password
+
+# Oracle client paths
+LD_LIBRARY_PATH=/opt/oracle/instantclient_19_14
+TNS_ADMIN=/opt/oracle/instantclient_19_14/network/admin
+
+# SQL file paths (default shown)
+IQMS_SQL_JOBS_FILE=./sql/iqms_jobs.sql
+IQMS_SQL_JOB_DETAIL_FILE=./sql/iqms_job_detail.sql
+IQMS_SQL_OPERATIONS_FILE=./sql/iqms_operations.sql
+IQMS_SQL_RESOURCES_FILE=./sql/iqms_resources.sql
+IQMS_SQL_MATERIALS_FILE=./sql/iqms_materials.sql
 ```
 
-- Start Vite dev server:
+### SQL Queries
 
-```
-npm run dev -- --host 0.0.0.0 --port 3000
-```
+The IQMS provider uses SQL queries in the `sql/` directory:
 
-## Tenant Token (Dev)
-- On first backend startup, a demo tenant and token will be created if not present.
-- The plaintext token will be printed to the backend console ONCE. Copy this value to your frontend `.env` as `VITE_TENANT_TOKEN`.
+- **iqms_jobs.sql** - List all jobs with operations
+- **iqms_job_detail.sql** - Detailed view for a specific job
+- **iqms_operations.sql** - Operations/routing steps for a job
+- **iqms_materials.sql** - Material requirements (BOM)
+- **iqms_resources.sql** - Work center capacity and load
+
+These queries can be customized to match your IQMS schema.
 
 ## API Endpoints
 
-- `GET /api/health` — Health check
-- `GET /api/sync/status` — Ingest status for current tenant
-- `GET /api/jobs` — List jobs (requires `x-tenant-token` header)
-- `POST /api/ingest/jobs` — Bulk ingest jobs (requires `x-tenant-token` header)
+### Public Endpoints
 
-## Example: Ingest Jobs via cURL
+- `GET /health` — Health check (returns provider type)
 
-```
-curl -X POST http://localhost:5050/api/ingest/jobs \
-  -H "x-tenant-token: <YOUR_TOKEN_HERE>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jobs": [
-      { "job_id": 1001, "job": "A1001", "work_center": "WC1", "start_date": "2025-01-01", "due_date": "2025-01-10", "qty_released": 100, "qty_completed": 20 },
-      { "job_id": 1002, "job": "A1002", "work_center": "WC2", "start_date": "2025-01-02", "due_date": "2025-01-12", "qty_released": 200, "qty_completed": 50 }
-    ]
-  }'
-```
+### Data Endpoints
 
-- Replace `<YOUR_TOKEN_HERE>` with the token printed by the backend.
+- `GET /jobs` — List all jobs (with optional filters)
+  - Query params: `status`, `dueDateStart`, `dueDateEnd`, `resourceId`
+- `GET /jobs/:id` — Get detailed job information
+  - Returns job details, operations, materials, resources
+- `GET /metrics/summary` — Get dashboard metrics
+  - Returns at-risk count, due next 7 days, overloaded resources
+
+### CSV Import (Database Provider)
+
+- `POST /upload-csv` — Import jobs from CSV
+  - Accepts multipart/form-data with `file` field
+  - Supports multiple CSV formats (legacy and ShadowOps v1)
 
 ## Testing
-- Ingest jobs as above, then reload the UI. The dashboard should show jobs from the API.
 
-## Notes
-- No Oracle connectivity in this phase.
-- All data is local to your Codespace/dev environment.
+```bash
+# Health check
+curl http://localhost:5050/health
+
+# Get all jobs
+curl http://localhost:5050/jobs
+
+# Get specific job
+curl http://localhost:5050/jobs/JOB-1001
+
+# Get metrics
+curl http://localhost:5050/metrics/summary
+```
+
+## Development
+
+The API uses TypeScript and can be run with hot-reload:
+
+```bash
+npm run dev     # Development with hot-reload
+npm start       # Production mode
+npm run seed    # Seed database with sample data
+```
