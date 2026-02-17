@@ -19,12 +19,41 @@ Then open **http://localhost:5173** in your browser.
 - ✅ PostgreSQL database running
 - ✅ Backend API server on port 5050
 - ✅ Frontend dashboard on port 5173
-- ✅ Sample manufacturing data loaded
+- ✅ Stub data from the canonical provider
 
 **To stop everything:**
 ```bash
 ./stop.sh
 ```
+
+---
+
+## 📑 CSV Contract (v1.0)
+
+ShadowOps treats the CSV upload as an API. The canonical contract is versioned and documented:
+
+### Legacy Formats
+- Human-readable schema: [docs/csv-schema-v1.md](docs/csv-schema-v1.md)
+- Machine-readable schema: [docs/csv-schema-v1.json](docs/csv-schema-v1.json)
+- Alias map for headers: [docs/csv-aliases-v1.json](docs/csv-aliases-v1.json)
+- Sample data: [docs/sample-data/sample-shadowops-v1.csv](docs/sample-data/sample-shadowops-v1.csv)
+
+### **NEW: ShadowOps Export Format (v1.0)**
+- **📘 [CSV Contract v1.0 - ShadowOps Export](docs/CSV_CONTRACT_V1_SHADOWOPS.md)** ← **Start Here**
+- Operation-level flat export (one row per Job + WorkCenter + OperationSeq)
+- Robust header alias mapping (handles Crystal export variations)
+- Automatic data quality enforcement
+- Deduplication and filtering rules
+- DueDate as canonical customer commitment date
+
+**Key Features:**
+- ✅ Flexible header recognition (30+ aliases)
+- ✅ Auto-drop rows with missing critical fields
+- ✅ No hard-coded root causes or accountability
+- ✅ Detailed import summary with warnings
+- ✅ Material shortage detection (only when data present)
+
+Required headers: Job, WorkCenter, OperationSeq. Common header variations (e.g., `Work Center`, `EQNO`) are normalized automatically. If required columns are missing or dates are invalid, the upload is rejected with clear guidance in the UI.
 
 ---
 
@@ -36,13 +65,15 @@ If you prefer manual control:
 # 1. Start database
 docker-compose up -d
 
-# 2. Start backend (in one terminal)
-cd server
+# 2. Install dependencies (workspace root)
 npm install
-npm start
 
-# 3. Start frontend (in another terminal)
-npm install
+# 3. Start backend (in one terminal)
+cd apps/api
+npm run dev
+
+# 4. Start frontend (in another terminal)
+cd apps/web
 npm run dev
 ```
 

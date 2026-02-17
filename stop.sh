@@ -8,7 +8,7 @@ echo ""
 
 # Stop Node processes
 echo "Stopping backend and frontend..."
-pkill -f "node.*index.js" || echo "Backend already stopped"
+pkill -f "tsx.*src/index.ts" || echo "Backend already stopped"
 pkill -f "vite" || echo "Frontend already stopped"
 
 # Stop PostgreSQL

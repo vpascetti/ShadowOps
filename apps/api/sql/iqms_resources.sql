@@ -1,0 +1,7 @@
+SELECT
+  WORK_CENTER.EQNO AS resource_id,
+  WORK_CENTER.MFG_TYPE AS resource_type,
+  0 AS available_capacity,
+  0 AS scheduled_load
+FROM IQMS.WORK_CENTER WORK_CENTER
+WHERE (WORK_CENTER.IS_VIRTUAL IS NULL OR WORK_CENTER.IS_VIRTUAL IN (' ', 'N'))

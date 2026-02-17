@@ -29,27 +29,27 @@ else
     exit 1
 fi
 
-# Install dependencies if needed
-if [ ! -d "server/node_modules" ]; then
-    echo "📦 Installing backend dependencies..."
-    cd server && npm install && cd ..
-fi
-
-if [ ! -d "node_modules" ]; then
-    echo "📦 Installing frontend dependencies..."
+# Install dependencies if needed (workspace root)
+if [ ! -x "node_modules/.bin/tsx" ]; then
+    echo "📦 Installing workspace dependencies..."
     npm install
 fi
 
 # Start backend server
 echo "🔧 Starting backend server on http://localhost:5050..."
-cd server
-nohup npm start > ../server.log 2>&1 &
+cd apps/api
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
+nohup npm run dev > ../../server.log 2>&1 &
 BACKEND_PID=$!
-cd ..
+cd ../..
 sleep 2
 
 # Check backend health
-if curl -s http://localhost:5050/api/health | grep -q "ok"; then
+if curl -s http://localhost:5050/health | grep -q "ok"; then
     echo "✅ Backend server is running (PID: $BACKEND_PID)"
 else
     echo "❌ Backend server failed to start. Check server.log for details."
@@ -59,8 +59,10 @@ fi
 
 # Start frontend
 echo "🎨 Starting frontend on http://localhost:5173..."
-nohup npm run dev > vite.log 2>&1 &
+cd apps/web
+nohup npm run dev > ../../vite.log 2>&1 &
 FRONTEND_PID=$!
+cd ../..
 sleep 3
 
 # Check frontend

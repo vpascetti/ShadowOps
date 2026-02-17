@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "description": "ShadowOps canonical CSV schema for job snapshots",
+  "required": [
+    "Job",
+    "Part",
+    "Customer",
+    "WorkCenter",
+    "StartDate",
+    "DueDate"
+  ],
+  "optional": [
+    "QtyReleased",
+    "QtyCompleted",
+    "Progress",
+    "Status",
+    "Reason",
+    "RootCause",
+    "Accountable",
+    "Projected",
+    "Timeline"
+  ],
+  "notes": [
+    "Dates support YYYY-MM-DD, MM/DD/YYYY, and MM-DD-YYYY",
+    "All headers are case-insensitive; common aliases are defined in csv-aliases-v1.json",
+    "Unknown columns are ignored but preserved in validation output"
+  ]
+}
