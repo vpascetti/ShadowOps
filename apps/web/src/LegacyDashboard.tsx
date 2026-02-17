@@ -405,6 +405,11 @@ export default function LegacyDashboard({ onExit }) {
   }
 
   useEffect(() => {
+    // Load initial data on mount
+    loadJobsFromApi('API', 'API: Canonical Provider')
+  }, [])
+
+  useEffect(() => {
     if (viewMode === 'dashboard') {
       loadJobsFromApi('API', 'API: Canonical Provider')
     }
