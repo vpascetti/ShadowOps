@@ -9,6 +9,7 @@ import LoadSummaryPanel from './LoadSummaryPanel';
 import MaterialShortagePanel from './MaterialShortagePanel';
 import ImportSummaryPanel from './ImportSummaryPanel';
 import SectionNavBar from './SectionNavBar';
+import DiagnosticInfo from './DiagnosticInfo';
 import '../styles/DashboardView.css';
 import { getShortageInfo } from '../utils/shortage.js';
 
@@ -85,18 +86,11 @@ export default function DashboardView({
   // Define default column order
   const defaultColumns = [
     { id: 'Job', label: 'Job', sortable: true },
-    { id: 'Part', label: 'Part', sortable: true },
-    { id: 'Customer', label: 'Customer', sortable: true },
     { id: 'WorkCenter', label: 'WorkCenter', sortable: true },
-    { id: 'StartDate', label: 'StartDate', sortable: true },
-    { id: 'DueDate', label: 'DueDate', sortable: true },
-    { id: 'QtyReleased', label: 'QtyReleased', sortable: true },
-    { id: 'QtyCompleted', label: 'QtyCompleted', sortable: true },
-    { id: 'Progress', label: 'Progress', sortable: false },
     { id: 'Status', label: 'Status', sortable: false },
-    { id: 'Reason', label: 'Reason', sortable: false },
-    { id: 'RootCause', label: 'Root Cause', sortable: false },
-    { id: 'Accountable', label: 'Accountable', sortable: false },
+    { id: 'Progress', label: 'Progress', sortable: false },
+    { id: 'Diagnostic', label: 'Constraint & Action', sortable: false },
+    { id: 'DueDate', label: 'Due', sortable: true },
     { id: 'Projected', label: 'Projected', sortable: false },
     { id: 'Timeline', label: 'Timeline', sortable: false },
   ];
@@ -164,34 +158,9 @@ export default function DashboardView({
         );
       case 'Status':
         return <StatusPill status={job.status} />;
-      case 'Reason':
-        return (
-          <div className="reason-cell">
-            <span className="reason-text">{getJobReason(job, asOfDate)}</span>
-          </div>
-        );
-      case 'RootCause':
-        {
-          const info = getShortageInfo(job, importStats)
-          return (
-            <div className="root-cause-cell">
-              <span className="issue-text">{info.normalizedRootCause}</span>
-            </div>
-          );
-        }
-      case 'Accountable':
-        {
-          const info = getShortageInfo(job, importStats)
-          return (
-            <div className="accountability-cell">
-              <div className="accountability-info">
-                <div className="responsible">{info.normalizedAccountable}</div>
-                <div className="action-needed"></div>
-              </div>
-            </div>
-          );
-        }
-      case 'Projected':
+      case 'Diagnostic':
+        return <DiagnosticInfo job={job} importStats={importStats} />;
+      case 'Part':
         return (
           <div className="projected-cell">
             <div className="projected-status">
