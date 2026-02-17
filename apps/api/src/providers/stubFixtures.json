@@ -6,12 +6,7 @@
       "priority": 1,
       "status": "open",
       "remaining_work": 42,
-      "risk_score": 76,
-      "materialAvailable": false,
-      "capacityPressure": true,
-      "workCenterLoad": 147,
-      "hoursAtRisk": 8,
-      "daysAtRisk": 0.33
+      "risk_score": 76
     },
     {
       "job_id": "JOB-1002",
@@ -19,13 +14,7 @@
       "priority": 2,
       "status": "open",
       "remaining_work": 18,
-      "risk_score": 85,
-      "materialAvailable": true,
-      "capacityPressure": false,
-      "workCenterLoad": 80,
-      "upstreamJobLate": true,
-      "hoursAtRisk": 12,
-      "daysAtRisk": 0.5
+      "risk_score": 85
     },
     {
       "job_id": "JOB-1003",
@@ -33,12 +22,7 @@
       "priority": 3,
       "status": "open",
       "remaining_work": 80,
-      "risk_score": 42,
-      "materialAvailable": true,
-      "capacityPressure": true,
-      "workCenterLoad": 147,
-      "hoursAtRisk": 2,
-      "daysAtRisk": 0
+      "risk_score": 42
     }
   ],
   "operations": [
