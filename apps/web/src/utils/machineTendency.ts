@@ -185,7 +185,7 @@ export function analyzeMachineTendency(
     predicted_downtime_hours: predictedDowntimeHours,
     maintenance_due_in_days: maintenanceDue,
     history,
-    predicted_issues,
+    predicted_issues: predictedIssues,
     recommended_action:
       health === 'critical'
         ? 'Schedule maintenance immediately'
