@@ -410,10 +410,11 @@ export default function LegacyDashboard({ onExit }) {
   }, [])
 
   useEffect(() => {
-    if (viewMode === 'dashboard') {
+    // Reload data when switching views to ensure it's always available
+    if ((viewMode === 'dashboard' || viewMode === 'briefing') && rawJobs.length === 0) {
       loadJobsFromApi('API', 'API: Canonical Provider')
     }
-  }, [viewMode])
+  }, [viewMode, rawJobs.length])
 
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0]
