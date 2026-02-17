@@ -40,7 +40,7 @@ const buildQuery = (params: Record<string, string>) => {
 }
 
 export default function App() {
-  const [view, setView] = useState<'phase1' | 'legacy'>('phase1')
+  const [view, setView] = useState<'phase1' | 'legacy'>('legacy')
   const [jobs, setJobs] = useState<Job[]>([])
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null)
   const [selectedJob, setSelectedJob] = useState<JobDetail | null>(null)
