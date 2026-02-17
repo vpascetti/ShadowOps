@@ -1,0 +1,41 @@
+/* DashboardView Styles */
+
+.file-input-label {
+	display: inline-block;
+	background: linear-gradient(90deg,#0ea5e9,#0369a1);
+	color: white;
+	padding: 0.8rem 1.4rem;
+	border-radius: 8px;
+	font-weight: 700;
+	box-shadow: 0 6px 18px rgba(3,105,161,0.12);
+	cursor: pointer;
+	transition: transform .12s ease, box-shadow .12s ease;
+	user-select: none;
+}
+
+.file-input-label:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 10px 26px rgba(3,105,161,0.16);
+}
+
+.file-input-label:active {
+	transform: translateY(0);
+}
+
+.file-input-label .label-icon {
+	margin-right: 0.6rem;
+	vertical-align: middle;
+}
+
+.file-name {
+	display: block;
+	margin-top: 0.6rem;
+	color: #064e3b;
+	font-weight: 600;
+}
+
+/* When the input is visible in other views we keep pointer styling */
+#csv-file-input {
+	display: none;
+}
+

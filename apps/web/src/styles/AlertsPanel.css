@@ -1,0 +1,117 @@
+/* ============================================================================
+   ALERTS PANEL STYLES
+   ============================================================================ */
+
+.alerts-panel {
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid #f97316;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.alerts-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.alert-item {
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.alert-item.alert-critical {
+  background: rgba(220, 38, 38, 0.05);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.alert-item.alert-warning {
+  background: rgba(249, 115, 22, 0.05);
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.alert-item.alert-watch {
+  background: rgba(202, 138, 4, 0.05);
+  border-color: rgba(202, 138, 4, 0.3);
+}
+
+.alert-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.alert-icon {
+  font-size: 1rem;
+  min-width: 1.5rem;
+}
+
+.alert-title-text {
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.alert-badge {
+  background: #f3f4f6;
+  color: #666;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.alert-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.alert-description {
+  color: #666;
+  line-height: 1.3;
+}
+
+.alert-meta {
+  color: #999;
+  font-size: 0.75rem;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+@media (max-width: 768px) {
+  .alerts-panel {
+    margin: 1rem 0;
+    padding: 1rem;
+  }
+
+  .alerts-list {
+    max-height: 300px;
+  }
+
+  .alert-item {
+    padding: 0.5rem;
+  }
+
+  .alert-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

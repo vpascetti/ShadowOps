@@ -1,0 +1,15 @@
+-- IQMS mapping examples (placeholders only)
+-- map IQMS WORKORDER -> canonical Job.job_id
+-- map IQMS DUE_DATE -> canonical Job.due_date
+-- map IQMS V_SCHED_HRS_TO_GO -> canonical Operation.remaining_time
+-- map IQMS WORK_CENTER -> canonical Resource.resource_id
+
+-- SELECT
+--   w.WORKORDER AS WORKORDER,
+--   w.DUE_DATE AS DUE_DATE,
+--   s.V_SCHED_HRS_TO_GO AS V_SCHED_HRS_TO_GO,
+--   wc.WORK_CENTER AS WORK_CENTER
+-- FROM WORKORDER w
+-- JOIN SCHED s ON s.WORKORDER_ID = w.ID
+-- JOIN WORKCENTER wc ON wc.ID = s.WORKCENTER_ID
+-- WHERE w.STATUS = 'OPEN';

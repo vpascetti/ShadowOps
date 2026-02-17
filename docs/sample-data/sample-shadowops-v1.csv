@@ -1,0 +1,4 @@
+Job,Part,Customer,WorkCenter,StartDate,DueDate,QtyReleased,QtyCompleted,Status,Reason,RootCause,Accountable
+100245,PN-9931,Acme Aerospace,CNC-01A1,2024-12-01,2024-12-10,120,45,At Risk,Material delay,Material Shortage,Procurement
+100246,PN-8810,Stark Industrial,WELD-02B,2024-12-02,2024-12-08,80,80,On Track,,,
+100247,PN-5520,Wayne Robotics,PAINT-03,2024-12-03,2024-12-05,150,60,Late,Machine down,Downtime,Maintenance

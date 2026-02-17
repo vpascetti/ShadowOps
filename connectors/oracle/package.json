@@ -1,0 +1,16 @@
+{
+  "name": "shadowops-oracle-sync",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "sync.js",
+  "scripts": {
+    "sync": "node sync.js",
+    "sync:watch": "node sync.js --watch"
+  },
+  "dependencies": {
+    "oracledb": "^6.3.0",
+    "dotenv": "^16.3.1",
+    "node-fetch": "^3.3.2"
+  }
+}

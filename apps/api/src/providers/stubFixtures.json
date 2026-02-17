@@ -1,0 +1,87 @@
+{
+  "jobs": [
+    {
+      "job_id": "JOB-1001",
+      "due_date": "2026-02-10",
+      "priority": 1,
+      "status": "open",
+      "remaining_work": 42,
+      "risk_score": 0
+    },
+    {
+      "job_id": "JOB-1002",
+      "due_date": "2026-02-06",
+      "priority": 2,
+      "status": "open",
+      "remaining_work": 18,
+      "risk_score": 0
+    },
+    {
+      "job_id": "JOB-1003",
+      "due_date": "2026-03-01",
+      "priority": 3,
+      "status": "open",
+      "remaining_work": 80,
+      "risk_score": 0
+    }
+  ],
+  "operations": [
+    {
+      "operation_id": "OP-1",
+      "job_id": "JOB-1001",
+      "resource_id": "WC-10",
+      "sequence": 10,
+      "standard_rate": 12,
+      "actual_rate": 10,
+      "remaining_time": 6
+    },
+    {
+      "operation_id": "OP-2",
+      "job_id": "JOB-1002",
+      "resource_id": "WC-20",
+      "sequence": 10,
+      "standard_rate": 8,
+      "actual_rate": 7,
+      "remaining_time": 4
+    },
+    {
+      "operation_id": "OP-3",
+      "job_id": "JOB-1003",
+      "resource_id": "WC-10",
+      "sequence": 20,
+      "standard_rate": 6,
+      "actual_rate": 5,
+      "remaining_time": 12
+    }
+  ],
+  "resources": [
+    {
+      "resource_id": "WC-10",
+      "resource_type": "work_center",
+      "available_capacity": 30,
+      "scheduled_load": 44
+    },
+    {
+      "resource_id": "WC-20",
+      "resource_type": "work_center",
+      "available_capacity": 20,
+      "scheduled_load": 16
+    }
+  ],
+  "materials": [
+    {
+      "job_id": "JOB-1001",
+      "item_id": "MAT-100",
+      "required_qty": 50,
+      "issued_qty": 20,
+      "availability_flag": false
+    },
+    {
+      "job_id": "JOB-1002",
+      "item_id": "MAT-200",
+      "required_qty": 10,
+      "issued_qty": 10,
+      "availability_flag": true
+    }
+  ]
+}

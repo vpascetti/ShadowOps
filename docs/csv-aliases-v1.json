@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "aliases": {
+    "Job": ["WO", "Work Order", "WorkOrder", "Job No", "Job Number", "WO Number"],
+    "Part": ["Item", "ItemNo", "Item Number", "PartNo", "Item #"],
+    "Customer": ["Cust", "CustomerName", "Customer Name"],
+    "WorkCenter": ["Work Center", "Workcenter", "WC", "WorkCtr", "Work Ctr", "Work Cntr"],
+    "StartDate": ["Start", "Start Date", "Start Dt", "StartDate", "Scheduled Start"],
+    "DueDate": ["Due", "Due Date", "PromiseDate", "Promise Date", "Due Dt", "Ship Date"],
+    "QtyReleased": ["Qty Released", "QtyRel", "Released Qty", "Release Qty"],
+    "QtyCompleted": ["Qty Complete", "QtyComp", "Completed Qty", "Complete Qty"],
+    "Progress": ["% Complete", "Pct Complete", "Completion %"],
+    "Status": ["State", "Job Status"],
+    "Reason": ["ShortReason", "Reason Code"],
+    "RootCause": ["Root Cause", "Cause"],
+    "Accountable": ["Owner", "Assigned To", "Responsible"],
+    "Projected": ["Projected Completion", "Proj Complete", "Projected Finish"],
+    "Timeline": ["Notes", "Comment", "Comments"]
+  }
+}

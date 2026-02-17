@@ -1,0 +1,982 @@
+/* ==========================================================================
+   Legacy Dashboard Styles (scoped by usage)
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #f5f5f5;
+  color: #333;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* ==========================================================================
+   HEADER
+   ========================================================================== */
+
+.app-header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: white;
+  padding: 2rem 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.app-subtitle {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.95rem;
+  opacity: 0.85;
+  font-weight: 300;
+}
+
+/* Header view toggle */
+.view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.view-toggle-btn {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.9);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.view-toggle-btn:hover {
+  transform: translateY(-2px);
+}
+
+.view-toggle-btn.active {
+  background: white;
+  color: #16213e;
+  border-color: rgba(0,0,0,0.08);
+  box-shadow: 0 6px 18px rgba(22,33,62,0.12);
+}
+
+/* ==========================================================================
+   MAIN CONTAINER
+   ========================================================================== */
+
+.app-container {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 1rem 2rem;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 2rem;
+  overflow-x: hidden;
+}
+
+@media (max-width: 1024px) {
+  .app-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   UPLOAD SECTION
+   ========================================================================== */
+
+.upload-section {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.upload-section h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+  color: #1a1a2e;
+}
+
+.instructions {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
+.file-input-wrapper {
+  margin-bottom: 1.5rem;
+}
+
+#csv-upload {
+  display: none;
+}
+
+.file-upload-button {
+  display: inline-block;
+  background: #0066cc;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.file-upload-button:hover {
+  background: #0052a3;
+  box-shadow: 0 2px 6px rgba(0, 102, 204, 0.3);
+}
+
+.file-upload-button:active {
+  transform: scale(0.98);
+}
+
+.file-loaded {
+  background: #e8f5e9;
+  border-left: 4px solid #4caf50;
+  color: #2e7d32;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+/* ==========================================================================
+   DATE PICKER SECTION
+   ========================================================================== */
+
+.date-picker-section {
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+}
+
+.date-picker-label {
+  display: block;
+  font-weight: 600;
+  color: #1565c0;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.date-picker-wrapper {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.date-picker-input {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: #1a1a2e;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.date-picker-input:hover {
+  border-color: #2196f3;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.1);
+}
+
+.date-picker-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.date-apply-button {
+  padding: 0.6rem 1.25rem;
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.date-apply-button:hover {
+  background: #1976d2;
+  box-shadow: 0 2px 6px rgba(25, 118, 210, 0.3);
+}
+
+.date-apply-button:active {
+  transform: scale(0.98);
+}
+
+.date-picker-note {
+  font-size: 0.8rem;
+  color: #0d47a1;
+  margin: 0;
+  font-style: italic;
+}
+
+.sample-csv {
+  background: #f9f9f9;
+  border-radius: 6px;
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+}
+
+.sample-csv h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  color: #1a1a2e;
+}
+
+.sample-csv pre {
+  margin: 0;
+  background: white;
+  padding: 0.75rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #333;
+  border: 1px solid #e0e0e0;
+}
+
+/* ==========================================================================
+   METRICS SECTION
+   ========================================================================== */
+
+.metrics-section {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   METRIC CARD
+   ========================================================================== */
+
+.metric-card {
+  padding: 1.25rem 1rem;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #e0e0e0;
+  transition: all 0.2s ease;
+  min-width: 0;
+  width: 100%;
+}
+
+.metric-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.metric-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.metric-neutral {
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+}
+
+.metric-green {
+  background: #e8f5e9;
+  border-color: #81c784;
+}
+
+.metric-green .metric-label {
+  color: #2e7d32;
+}
+
+.metric-green .metric-value {
+  color: #2e7d32;
+}
+
+.metric-orange {
+  background: #fff3e0;
+  border-color: #ffb74d;
+}
+
+.metric-orange .metric-label {
+  color: #e65100;
+}
+
+.metric-orange .metric-value {
+  color: #e65100;
+}
+
+.metric-red {
+  background: #ffebee;
+  border-color: #ef5350;
+}
+
+.metric-red .metric-label {
+  color: #c62828;
+}
+
+.metric-red .metric-value {
+  color: #c62828;
+}
+
+/* ==========================================================================
+   TABLE STYLES
+   ========================================================================== */
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.jobs-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 0.9rem;
+}
+
+.jobs-table thead {
+  background: #f9f9f9;
+  border-bottom: 2px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.jobs-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #1a1a2e;
+  white-space: nowrap;
+  background: #f9f9f9;
+}
+
+.jobs-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  padding-right: 1.5rem;
+  position: relative;
+}
+
+.jobs-table th.sortable:hover {
+  background: #efefef;
+}
+
+.jobs-table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.15s ease;
+}
+
+.jobs-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.jobs-table td {
+  padding: 0.75rem 1rem;
+  color: #333;
+}
+
+.reason-cell {
+  min-width: 180px;
+  max-width: 250px;
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+}
+
+.root-cause-cell {
+  min-width: 140px;
+  max-width: 200px;
+}
+
+.issue-text {
+  font-size: 0.9rem;
+  color: #d97706;
+  font-weight: 600;
+}
+
+.accountability-cell {
+  min-width: 200px;
+  max-width: 280px;
+}
+
+.accountability-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.accountability-info .responsible {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.accountability-info .action-needed {
+  font-size: 0.8rem;
+  color: #666;
+  font-style: italic;
+}
+
+.progress-cell {
+  min-width: 120px;
+}
+
+/* ==========================================================================
+   PROGRESS BAR
+   ========================================================================== */
+
+.progress-bar-container {
+  height: 20px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.25rem;
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50 0%, #45a049 100%);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.progress-text {
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   STATUS PILL
+   ========================================================================== */
+
+.status-pill {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.pill-green {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #81c784;
+}
+
+.pill-orange {
+  background: #fff3e0;
+  color: #e65100;
+  border: 1px solid #ffb74d;
+}
+
+.pill-red {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef5350;
+}
+
+.pill-default {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #d0d0d0;
+}
+
+/* ==========================================================================
+   EMPTY STATE
+   ========================================================================== */
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #999;
+  font-size: 1rem;
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .app-container {
+    padding: 0 0.5rem;
+  }
+
+  .app-title {
+    font-size: 1.8rem;
+  }
+
+  .app-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .upload-section,
+  .metrics-section {
+    padding: 1rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .jobs-table {
+    font-size: 0.8rem;
+  }
+
+  .jobs-table th,
+  .jobs-table td {
+    padding: 0.6rem 0.5rem;
+  }
+}
+
+/* ==========================================================================
+   FILTER CONTROLS
+   ========================================================================== */
+
+.filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-button {
+  padding: 0.5rem 1rem;
+  border: 2px solid #ddd;
+  background: white;
+  color: #333;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.filter-button:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.filter-button.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.filter-dropdown {
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+  min-width: 160px;
+}
+
+.filter-dropdown:hover {
+  border-color: #2563eb;
+}
+
+.filter-dropdown:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* ==========================================================================
+   WORK CENTER SUMMARY
+   ========================================================================== */
+
+.work-center-summary {
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.work-center-summary h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.summary-card {
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #f9fafb;
+  transition: all 0.2s ease;
+}
+
+.summary-card:hover {
+  border-color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+}
+
+.summary-label {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.summary-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summary-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.stat-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-weight: 700;
+  color: #333;
+  min-width: 2rem;
+  text-align: right;
+}
+
+.stat-value.late {
+  color: #dc2626;
+}
+
+.stat-value.at-risk {
+  color: #f97316;
+}
+
+/* ==========================================================================
+   PROJECTED COMPLETION & TIMELINE COLUMNS
+   ========================================================================== */
+
+.projected-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0;
+}
+
+.projected-status {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.projected-late {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.projected-on-pace {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.projected-early {
+  color: #0891b2;
+  background: rgba(6, 182, 212, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.projected-unknown {
+  color: #6b7280;
+  background: rgba(107, 114, 128, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.projected-date {
+  font-size: 0.85rem;
+  color: #666;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.timeline-cell {
+  min-width: 250px;
+  padding: 0.5rem 0;
+}
+
+/* ==========================================================================
+   MEDIA QUERIES
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .timeline-cell {
+    min-width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 1rem 0.5rem;
+  }
+
+  .app-title {
+    font-size: 1.5rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Top toggle (alternate class names supported) */
+.top-toggle,
+.view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.top-toggle button,
+.view-toggle-btn {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.9);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.top-toggle button.active,
+.view-toggle-btn.active {
+  background: white;
+  color: #16213e;
+  border-color: rgba(0,0,0,0.08);
+}
+
+/* Section nav (simple) */
+.section-nav,
+.section-nav-bar {
+  margin: 1rem 0;
+}
+
+.section-nav button,
+.section-nav-button {
+  margin-right: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  cursor: pointer;
+}
+
+.section-nav button.active,
+.section-nav-button.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+/* Executive Briefing layout */
+.briefing-header {
+  background: white;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.briefing-header h2 {
+  margin: 0 0 0.25rem 0;
+}
+
+.briefing-sub {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.briefing-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 1000px) {
+  .briefing-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* file input loading state */
+.file-input-label.loading {
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.file-input-label.loading::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-top-color: rgba(0,0,0,0.45);
+  border-radius: 50%;
+  margin-left: 8px;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.briefing-section {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.briefing-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.risk-card,
+.hotspot-card {
+  padding: 0.75rem;
+  border: 1px solid #eef2ff;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.hotspot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.hotspot-severity.high { color: #b91c1c; font-weight:700 }
+.hotspot-severity.watch { color: #b45309; font-weight:700 }
+.hotspot-severity.healthy { color: #166534; font-weight:700 }
