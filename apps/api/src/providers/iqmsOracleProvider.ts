@@ -167,6 +167,10 @@ const buildJobFromRow = (row: Record<string, unknown>): Job | null => {
   const partsToGo = toNumber(getRowValue(row, ['parts_to_go']), 0)
   const mfgQuantity = toNumber(getRowValue(row, ['mfg_quantity', 'mfg_quan']), 0)
   
+  // Pricing data from ORD_DETAIL
+  const unitPrice = toNumber(getRowValue(row, ['unit_price']), null)
+  const totalOrderValue = toNumber(getRowValue(row, ['total_order_value']), null)
+  
   // Work Center Capacity Data
   const workCenterLoad = toNumber(getRowValue(row, ['work_center_load', 'total_load']), 0)
   const workCenterQueueDepth = toNumber(getRowValue(row, ['work_center_queue_depth', 'queue_depth']), 0)
@@ -286,6 +290,10 @@ const buildJobFromRow = (row: Record<string, unknown>): Job | null => {
     customer,
     work_center: workCenter,
     parts_to_go: partsToGo,
+    
+    // Pricing data
+    ...(unitPrice !== null && { unit_price: unitPrice }),
+    ...(totalOrderValue !== null && { total_order_value: totalOrderValue }),
     
     // Additional metadata
     ...(description && { description }),
@@ -426,11 +434,40 @@ const execute = async (sql: string, binds: Record<string, unknown> = {}) => {
   }
 }
 
+// Simple in-memory cache
+interface CacheEntry<T> {
+  data: T
+  timestamp: number
+}
+
+const jobsCache: CacheEntry<Job[]> | null = null
+const CACHE_TTL_MS = parseInt(process.env.IQMS_CACHE_TTL_SECONDS || '60', 10) * 1000 // Default 60 seconds
+
+const isCacheValid = <T,>(cache: CacheEntry<T> | null): cache is CacheEntry<T> => {
+  if (!cache) return false
+  return Date.now() - cache.timestamp < CACHE_TTL_MS
+}
+
 export class IQMSOracleProvider implements DataProvider {
+  private jobsCache: CacheEntry<Job[]> | null = null
+
   async getJobs(query?: JobQuery): Promise<Job[]> {
+    // Check cache first
+    if (isCacheValid(this.jobsCache)) {
+      console.log('[Cache] Serving jobs from cache')
+      return applyJobFilters(this.jobsCache.data, query).sort((a, b) => b.risk_score - a.risk_score)
+    }
+
+    // Cache miss - query database
+    console.log('[DB] Fetching jobs from database...')
     const sql = getRequiredSql('IQMS_SQL_JOBS')
     const rows = await execute(sql)
     const jobs = rows.map(buildJobFromRow).filter((job): job is Job => Boolean(job))
+    
+    // Update cache
+    this.jobsCache = { data: jobs, timestamp: Date.now() }
+    console.log(`[Cache] Cached ${jobs.length} jobs`)
+    
     return applyJobFilters(jobs, query).sort((a, b) => b.risk_score - a.risk_score)
   }
 

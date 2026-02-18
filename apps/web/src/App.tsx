@@ -47,8 +47,7 @@ export default function App() {
   const [selectedJob, setSelectedJob] = useState<JobDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [uploadMessage, setUploadMessage] = useState<string | null>(null)
-  const [uploading, setUploading] = useState(false)
+
   const [reloadToken, setReloadToken] = useState(0)
 
   const [statusFilter, setStatusFilter] = useState('')
@@ -99,37 +98,7 @@ export default function App() {
     }
   }, [queryString, reloadToken])
 
-  const handleCsvUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
 
-    setUploading(true)
-    setError(null)
-    setUploadMessage(null)
-
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const res = await fetch('/upload-csv', {
-        method: 'POST',
-        body: formData
-      })
-
-      const payload = await res.json().catch(() => ({}))
-      if (!res.ok || !payload.ok) {
-        throw new Error(payload.error || 'Upload failed')
-      }
-
-      setUploadMessage(`Imported ${payload.jobsImported ?? 0} jobs from ${file.name}.`)
-      setReloadToken((prev) => prev + 1)
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setUploading(false)
-      event.target.value = ''
-    }
-  }
 
   const formatRiskReason = (reason?: string) => {
     if (!reason) return '—'
@@ -208,28 +177,7 @@ export default function App() {
         </article>
       </section>
 
-      <section className="upload-panel">
-        <div>
-          <p className="upload-panel__title">Upload CSV snapshot</p>
-          <p className="upload-panel__hint">
-            Drag in a ShadowOps export or IQMS schedule summary to refresh risk scoring.
-          </p>
-        </div>
-        <div className="upload-panel__actions">
-          <input
-            type="file"
-            accept=".csv"
-            id="phase1-upload"
-            onChange={handleCsvUpload}
-            disabled={uploading}
-          />
-          <label htmlFor="phase1-upload" className="upload-panel__button">
-            {uploading ? 'Uploading...' : 'Choose CSV'}
-          </label>
-        </div>
-      </section>
 
-      {uploadMessage && <div className="state state--success">{uploadMessage}</div>}
 
       <section className="filters">
         <label>

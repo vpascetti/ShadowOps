@@ -4,7 +4,7 @@
 # Stops API and Web App
 
 echo ""
-echo "🛑 Stopping ShadowOps Demo Services"
+echo "Stopping ShadowOps Demo Services"
 echo "===================================="
 echo ""
 
@@ -19,7 +19,7 @@ pkill -f "npm run dev.*5173" 2>/dev/null || echo "   (not running)"
 sleep 1
 
 echo ""
-echo "✅ All services stopped"
+echo "All services stopped"
 echo ""
 echo "Logs available at: api.log, web.log"
 echo ""

@@ -5,17 +5,13 @@ export default function FinancialSummary() {
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [unitPrice, setUnitPrice] = useState(100)
-  const [hourlyRate, setHourlyRate] = useState(75)
   const [dataSource, setDataSource] = useState('auto')
 
-  const fetchSummary = async (price = unitPrice, rate = hourlyRate, source = dataSource) => {
+  const fetchSummary = async (source = dataSource) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(
-        `/financial-summary?unitPrice=${price}&stdHourlyRate=${rate}&source=${source}`
-      )
+      const res = await fetch(`/financial-summary?source=${source}`)
       const data = await res.json()
       if (!data.ok) throw new Error(data.error || 'Failed to fetch financial summary')
       setSummary(data)
@@ -30,21 +26,9 @@ export default function FinancialSummary() {
     fetchSummary()
   }, [])
 
-  const handlePriceChange = (e) => {
-    const price = parseFloat(e.target.value)
-    setUnitPrice(price)
-    fetchSummary(price, hourlyRate, dataSource)
-  }
-
-  const handleRateChange = (e) => {
-    const rate = parseFloat(e.target.value)
-    setHourlyRate(rate)
-    fetchSummary(unitPrice, rate, dataSource)
-  }
-
   const handleSourceChange = (newSource) => {
     setDataSource(newSource)
-    fetchSummary(unitPrice, hourlyRate, newSource)
+    fetchSummary(newSource)
   }
 
   const formatCurrency = (value) => {
@@ -64,7 +48,7 @@ export default function FinancialSummary() {
   if (error) return <div className="financial__error">Error: {error}</div>
   if (!summary) return <div className="financial__empty">No financial data available</div>
 
-  const { summary: fin, metrics, assumptions, dataSource: activeDataSource } = summary
+  const { summary: fin, metrics, dataSource: activeDataSource } = summary
 
   return (
     <div className="financial">
@@ -92,7 +76,7 @@ export default function FinancialSummary() {
               onClick={() => handleSourceChange('iqms')}
               title="Query IQMS directly for real-time data"
             >
-              IQMS Live 🔴
+              IQMS Live
             </button>
             <button
               className={`source-btn ${dataSource === 'cached' ? 'active' : ''}`}
@@ -105,45 +89,18 @@ export default function FinancialSummary() {
         </div>
       </section>
 
-      <section className="financial__assumptions">
-        <div className="assumption-input">
-          <label>
-            Unit Price ($):
-            <input
-              type="number"
-              min="1"
-              step="5"
-              value={unitPrice}
-              onChange={handlePriceChange}
-            />
-          </label>
-        </div>
-        <div className="assumption-input">
-          <label>
-            Std Hourly Rate ($):
-            <input
-              type="number"
-              min="1"
-              step="5"
-              value={hourlyRate}
-              onChange={handleRateChange}
-            />
-          </label>
-        </div>
-      </section>
-
       <section className="financial__grid">
         <article className="financial__card financial__card--risk">
-          <div className="card__icon">⚠️</div>
+          <div className="card__icon"></div>
           <p className="card__label">Revenue at Risk</p>
           <p className="card__value">{formatCurrency(fin.revenueAtRisk)}</p>
           <p className="card__detail">
-            {metrics.totalQtyReleased} units @ ${unitPrice}/unit
+            {metrics.atRiskCount} at-risk jobs (score ≥ 70)
           </p>
         </article>
 
         <article className="financial__card financial__card--delayed">
-          <div className="card__icon">📉</div>
+          <div className="card__icon"></div>
           <p className="card__label">Delayed Order Impact</p>
           <p className="card__value">{formatCurrency(fin.delayedOrderImpact)}</p>
           <p className="card__detail">
@@ -151,26 +108,26 @@ export default function FinancialSummary() {
           </p>
         </article>
 
-        <article className="financial__card financial__card--cost">
-          <div className="card__icon">🔧</div>
-          <p className="card__label">Resource Costs (Remaining)</p>
-          <p className="card__value">{formatCurrency(fin.resourceCosts)}</p>
-          <p className="card__detail">
-            {metrics.totalRemainingWork} hours @ ${hourlyRate}/hr
-          </p>
-        </article>
-
         <article className="financial__card financial__card--wip">
-          <div className="card__icon">📦</div>
+          <div className="card__icon"></div>
           <p className="card__label">Work-in-Progress Value</p>
           <p className="card__value">{formatCurrency(fin.wipValue)}</p>
           <p className="card__detail">
-            {metrics.totalRemainingWork} units remaining
+            {metrics.totalJobs} active jobs
+          </p>
+        </article>
+
+        <article className="financial__card financial__card--total">
+          <div className="card__icon"></div>
+          <p className="card__label">Total Order Value</p>
+          <p className="card__value">{formatCurrency(fin.totalOrderValue)}</p>
+          <p className="card__detail">
+            {metrics.jobsWithPricing} jobs with pricing data
           </p>
         </article>
 
         <article className="financial__card financial__card--ontime">
-          <div className="card__icon">✅</div>
+          <div className="card__icon"></div>
           <p className="card__label">On-Time Delivery Rate</p>
           <p className="card__value">{formatPercent(fin.onTimeDeliveryPct)}</p>
           <p className="card__detail">
@@ -179,7 +136,7 @@ export default function FinancialSummary() {
         </article>
 
         <article className="financial__card financial__card--throughput">
-          <div className="card__icon">⚠️</div>
+          <div className="card__icon"></div>
           <p className="card__label">At-Risk Jobs</p>
           <p className="card__value">{metrics.atRiskCount}</p>
           <p className="card__detail">
@@ -215,17 +172,15 @@ export default function FinancialSummary() {
             <span className="detail__label">At-Risk Jobs:</span>
             <span className="detail__value detail__value--warning">{metrics.atRiskCount}</span>
           </div>
+          <div className="detail__item">
+            <span className="detail__label">Jobs with Pricing:</span>
+            <span className="detail__value">{metrics.jobsWithPricing}</span>
+          </div>
+          <div className="detail__item">
+            <span className="detail__label">Avg Unit Price:</span>
+            <span className="detail__value">{formatCurrency(metrics.avgUnitPrice)}</span>
+          </div>
         </div>
-      </section>
-
-      <section className="financial__assumptions-display">
-        <h3>Calculation Assumptions</h3>
-        <p>
-          Data sourced from <strong>{activeDataSource === 'iqms' ? 'IQMS (Live)' : 'Cached Database'}</strong>.
-          Financial calculations use a unit price of <strong>${assumptions.unitPrice}</strong> and
-          a standard hourly rate of <strong>${assumptions.stdHourlyRate}</strong>.
-          Adjust these values above or change data source to see real-time impact on financial metrics.
-        </p>
       </section>
     </div>
   )

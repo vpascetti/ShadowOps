@@ -72,8 +72,7 @@ export default function DashboardView({
   handleDateInputChange,
   handleApplyDate,
   parseDate,
-  handleFileUpload,
-  uploadLoading,
+
 }) {
   // Create refs for section navigation
   const alertsRef = useRef(null);
@@ -439,7 +438,7 @@ export default function DashboardView({
             </>
           ) : (
             <div className="empty-state">
-              <p>No jobs loaded. Upload a CSV to get started.</p>
+              <p>No jobs loaded. Please check your database connection.</p>
             </div>
           )}
         </section>

@@ -347,7 +347,7 @@ export default function LegacyDashboard({ onExit, onFinancial }) {
   const [selectedDate, setSelectedDate] = useState('')
   const [asOfDate, setAsOfDate] = useState(new Date())
   const [fileName, setFileName] = useState('')
-  const [uploadLoading, setUploadLoading] = useState(false)
+
   const [sortField, setSortField] = useState('Job')
   const [sortOrder, setSortOrder] = useState('asc')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -446,35 +446,7 @@ export default function LegacyDashboard({ onExit, onFinancial }) {
     }
   }, [viewMode, rawJobs.length])
 
-  const handleFileUpload = async (event) => {
-    const file = event.target.files?.[0]
-    if (!file) return
 
-    setUploadLoading(true)
-    setApiError(null)
-
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const res = await fetch('/upload-csv', {
-        method: 'POST',
-        body: formData
-      })
-
-      const payload = await res.json().catch(() => ({}))
-      if (!res.ok || !payload.ok) {
-        throw new Error(payload.error || 'Upload failed')
-      }
-
-      await loadJobsFromApi('CSV Upload', file.name)
-    } catch (err) {
-      setApiError(err.message)
-    } finally {
-      setUploadLoading(false)
-      event.target.value = ''
-    }
-  }
 
   const jobs = useMemo(() => {
     const enrichedJobs = rawJobs.map((row) => enrichJob(row, asOfDate))
@@ -610,7 +582,7 @@ export default function LegacyDashboard({ onExit, onFinancial }) {
                   style={{ marginLeft: '32px', backgroundColor: '#052e4d' }}
                   title="View financial summary"
                 >
-                  💰 Financial Summary
+                  Financial Summary
                 </button>
               )}
             </div>
@@ -668,8 +640,6 @@ export default function LegacyDashboard({ onExit, onFinancial }) {
           handleDateInputChange={handleDateInputChange}
           handleApplyDate={handleApplyDate}
           parseDate={parseDate}
-          handleFileUpload={handleFileUpload}
-          uploadLoading={uploadLoading}
         />
       )}
     </div>

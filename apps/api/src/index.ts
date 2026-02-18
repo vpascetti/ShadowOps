@@ -1,20 +1,15 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import multer from 'multer'
-import Papa from 'papaparse'
 import { getProvider } from './providers/index.js'
 import type { RealtimePartNumber, JobMaterialDetail } from './providers/iqmsOracleProvider.js'
 import { ensureDemoTenantAndToken, initDB, pool } from '../db.js'
-import { isIQMSScheduleSummaryV1, importIQMSScheduleSummaryV1 } from '../iqms_importer.js'
-import { normalizeCsvRows } from '../shadowops_normalizer.js'
 
 dotenv.config()
 
 const app = express()
 const port = Number(process.env.PORT || 5050)
 const provider = getProvider()
-const upload = multer({ storage: multer.memoryStorage() })
 
 const deriveJobId = (jobValue: unknown) => {
   const parsed = parseInt(String(jobValue), 10)
@@ -83,9 +78,6 @@ app.get('/metrics/summary', async (_req, res) => {
 
 app.get('/financial-summary', async (req, res) => {
   try {
-    const unitPrice = parseFloat(String(req.query.unitPrice || 100))
-    const stdHourlyRate = parseFloat(String(req.query.stdHourlyRate || 75))
-
     // Set a 10-second timeout for the query
     const timeoutPromise = new Promise<never>((_resolve, reject) => {
       setTimeout(() => reject(new Error('Financial summary query timeout - taking too long')), 10000)
@@ -96,6 +88,12 @@ app.get('/financial-summary', async (req, res) => {
       provider.getJobs({}),
       timeoutPromise
     ])
+
+    // Calculate average unit price from jobs with pricing data
+    const jobsWithPrice = jobs.filter((j: any) => j.unit_price && j.unit_price > 0)
+    const avgUnitPrice = jobsWithPrice.length > 0 
+      ? jobsWithPrice.reduce((sum: number, j: any) => sum + (parseFloat(j.unit_price) || 0), 0) / jobsWithPrice.length
+      : 0
 
     // Calculate metrics based on available Job fields
     const totalJobs = jobs.length
@@ -116,13 +114,45 @@ app.get('/financial-summary', async (req, res) => {
     }).length
 
     const atRiskJobs = jobs.filter((j: any) => j.risk_score >= 70)
-    const atRiskValue = atRiskJobs.length * (unitPrice * 100) // estimate 100 units per job
+    
+    // Calculate revenue at risk using actual order values
+    const revenueAtRisk = atRiskJobs.reduce((sum: number, j: any) => {
+      const orderValue = parseFloat(j.total_order_value) || 0
+      return sum + orderValue
+    }, 0)
+    
+    // Calculate delayed order impact using actual order values
+    const delayedOrderImpact = jobs
+      .filter((j: any) => {
+        const dueDate = j.due_date ? new Date(j.due_date) : null
+        return dueDate && (dueDate < now || (dueDate >= now && dueDate <= sevenDaysFromNow))
+      })
+      .reduce((sum: number, j: any) => {
+        const orderValue = parseFloat(j.total_order_value) || 0
+        return sum + orderValue
+      }, 0)
 
-    // Calculate financial metrics
-    const revenueAtRisk = atRiskValue
-    const delayedOrderImpact = (overdueCount + dueSoonCount) * (unitPrice * 100)
-    const resourceCosts = totalRemainingWork * stdHourlyRate
+    // WIP value calculation (for jobs in progress)
+    const wipValue = jobs
+      .filter((j: any) => j.status !== 'closed')
+      .reduce((sum: number, j: any) => {
+        const orderValue = parseFloat(j.total_order_value) || 0
+        return sum + orderValue
+      }, 0)
+    
     const onTimeDeliveryPct = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0
+    
+    // Calculate total quantity from actual orders
+    const totalQtyOrdered = jobs.reduce((sum: number, j: any) => {
+      const qty = parseFloat(j.mfg_quantity) || parseFloat(j.ship_quantity) || 0
+      return sum + qty
+    }, 0)
+    
+    // Calculate total order value from jobs with pricing
+    const totalOrderValue = jobs.reduce((sum: number, j: any) => {
+      const orderValue = parseFloat(j.total_order_value) || 0
+      return sum + orderValue
+    }, 0)
 
     res.json({
       ok: true,
@@ -130,8 +160,8 @@ app.get('/financial-summary', async (req, res) => {
       summary: {
         revenueAtRisk: parseFloat(revenueAtRisk.toFixed(2)),
         delayedOrderImpact: parseFloat(delayedOrderImpact.toFixed(2)),
-        resourceCosts: parseFloat(resourceCosts.toFixed(2)),
-        wipValue: parseFloat((totalRemainingWork * unitPrice).toFixed(2)),
+        wipValue: parseFloat(wipValue.toFixed(2)),
+        totalOrderValue: parseFloat(totalOrderValue.toFixed(2)),
         onTimeDeliveryPct: parseFloat(onTimeDeliveryPct.toFixed(2)),
         throughput: 0 // Not available in current schema
       },
@@ -141,11 +171,10 @@ app.get('/financial-summary', async (req, res) => {
         totalRemainingWork: parseFloat(totalRemainingWork.toFixed(2)),
         overdueCount,
         dueSoonCount,
-        atRiskCount: atRiskJobs.length
-      },
-      assumptions: {
-        unitPrice,
-        stdHourlyRate
+        atRiskCount: atRiskJobs.length,
+        jobsWithPricing: jobsWithPrice.length,
+        avgUnitPrice: parseFloat(avgUnitPrice.toFixed(2)),
+        totalQtyOrdered: parseFloat(totalQtyOrdered.toFixed(2))
       }
     })
   } catch (error) {
@@ -179,254 +208,6 @@ app.get('/jobs/:id/materials', async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, error: (error as Error).message })
   }
-})
-
-app.post('/upload-csv', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ ok: false, error: 'No file uploaded' })
-  }
-
-  const { tenantId } = await ensureDemoTenantAndToken()
-  const csvStr = req.file.buffer.toString('utf8')
-
-  let jobs: Array<Record<string, any>> = []
-  let warnings: string[] = []
-  let errors: string[] = []
-  let totalRows = 0
-  let source = 'Unknown'
-  let importer = ''
-  let detectedHeaders: string[] = []
-  let normalizedHeaders: Array<Record<string, unknown> | string> = []
-  let unknownColumns: string[] = []
-  let schemaVersion = 'ShadowOps-1.0'
-  let importStats: Record<string, unknown> = {}
-
-  try {
-    const parsed = Papa.parse(csvStr, { header: true, skipEmptyLines: true })
-    const headers = parsed.meta.fields || []
-    const rawRows = parsed.data || []
-    totalRows = rawRows.length
-
-    if (isIQMSScheduleSummaryV1(headers)) {
-      const result = importIQMSScheduleSummaryV1(csvStr)
-      jobs = result.jobs.map((job) => {
-        const startDate = job.startDate ? new Date(job.startDate) : null
-        const dueDate = job.dueDate ? new Date(job.dueDate) : null
-        const hoursToGo = typeof job.hoursToGo === 'number' ? job.hoursToGo : null
-
-        return {
-          job_id: deriveJobId(job.jobId),
-          job: String(job.jobId),
-          work_center: job.workCenter || null,
-          customer: job.customer || null,
-          part: job.part || null,
-          start_date: startDate,
-          due_date: dueDate,
-          hours_to_go: hoursToGo,
-          parts_to_go: typeof job.partsToGo === 'number' ? job.partsToGo : null,
-          qty_released: job.qtyReleased ?? null,
-          qty_completed: job.qtyCompleted ?? null,
-          reason: null,
-          root_cause: null,
-          accountable: null,
-          status: 'open'
-        }
-      })
-      warnings = result.warnings
-      source = 'IQMS Schedule Summary (CSV)'
-      importer = result.importer
-      detectedHeaders = result.detectedHeaders
-      normalizedHeaders = result.normalizedHeaders
-      unknownColumns = result.unknownColumns || []
-      schemaVersion = 'IQMS-1.0'
-      importStats = {
-        rowsLoaded: totalRows,
-        rowsKept: jobs.length,
-        rowsDropped: totalRows - jobs.length,
-        duplicatesRemoved: 0,
-        dropReasons: {}
-      }
-    } else {
-      const result = normalizeCsvRows(rawRows, headers, { dedupe: true })
-      warnings = result.warnings || []
-      errors = result.errors || []
-      detectedHeaders = headers
-      normalizedHeaders = result.normalizedHeaders || headers
-      unknownColumns = result.unknownColumns || []
-      importStats = result.stats || {}
-
-      if (errors.length) {
-        return res.status(400).json({
-          ok: false,
-          errors,
-          warnings,
-          source: 'ShadowOps Export',
-          importer: 'SHADOWOPS_EXPORT_V1',
-          detectedHeaders: headers,
-          normalizedHeaders,
-          unknownColumns,
-          schemaVersion,
-          totalRows,
-          jobsImported: 0,
-          importStats
-        })
-      }
-
-      const jobMap = new Map()
-      result.normalizedRows.forEach((row) => {
-        const jobKey = row.workOrderId || row.job
-        if (!jobKey) return
-
-        if (!jobMap.has(jobKey)) {
-          const jobId = row.workOrderId || deriveJobId(row.job)
-          jobMap.set(jobKey, {
-            job_id: jobId,
-            job: row.job,
-            work_center: row.workCenter,
-            customer: row.customer,
-            part: row.itemNumber,
-            start_date: row.startTime,
-            due_date: row.dueDate,
-            qty_released: row.qtyReleased ?? row.deliveryQty ?? null,
-            qty_completed: row.qtyCompleted ?? row.cyclesToGo ?? null,
-            hours_to_go: row.hoursToGo,
-            parts_to_go: row.cyclesToGo,
-            prod_start_time: row.startTime,
-            prod_end_time: row.endTime,
-            reason: null,
-            root_cause: null,
-            accountable: null,
-            status: 'open',
-            operations: []
-          })
-        }
-
-        const job = jobMap.get(jobKey)
-        job.operations.push({
-          workCenter: row.workCenter,
-          operationSeq: row.operationSeq,
-          startTime: row.startTime,
-          endTime: row.endTime,
-          hoursToGo: row.hoursToGo
-        })
-
-        if (row.dueDate && (!job.due_date || row.dueDate < job.due_date)) {
-          job.due_date = row.dueDate
-        }
-        if (row.startTime && (!job.start_date || row.startTime < job.start_date)) {
-          job.start_date = row.startTime
-        }
-        if (row.endTime && (!job.prod_end_time || row.endTime > job.prod_end_time)) {
-          job.prod_end_time = row.endTime
-        }
-        if (row.hoursToGo !== null && (job.hours_to_go === null || row.hoursToGo > job.hours_to_go)) {
-          job.hours_to_go = row.hoursToGo
-        }
-      })
-
-      jobs = Array.from(jobMap.values()).map((job) => {
-        const { operations, ...jobData } = job
-        return jobData
-      })
-
-      source = 'ShadowOps Export'
-      importer = 'SHADOWOPS_EXPORT_V1'
-    }
-  } catch (error) {
-    return res.status(400).json({ ok: false, error: (error as Error).message })
-  }
-
-  const client = await pool.connect()
-  try {
-    await client.query('BEGIN')
-    await client.query('DELETE FROM jobs WHERE tenant_id = $1', [tenantId])
-
-    for (const job of jobs) {
-      if (!job.job_id || !job.job) continue
-
-      const values = [
-        tenantId,
-        job.job_id,
-        job.job,
-        job.work_center || null,
-        job.customer || null,
-        job.part || null,
-        job.start_date || null,
-        job.due_date || null,
-        job.qty_released ?? null,
-        job.qty_completed ?? null,
-        job.hours_to_go ?? null,
-        job.parts_to_go ?? null,
-        job.prod_start_time || null,
-        job.prod_end_time || null,
-        job.reason || null,
-        job.root_cause || null,
-        job.accountable || null,
-        job.projected || null,
-        job.timeline || null,
-        job.status || null
-      ]
-
-      await client.query(
-        `
-          INSERT INTO jobs (
-            tenant_id, job_id, job, work_center, customer, part,
-            start_date, due_date, qty_released, qty_completed,
-            hours_to_go, parts_to_go, prod_start_time, prod_end_time,
-            reason, root_cause, accountable, projected, timeline, status
-          ) VALUES (
-            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20
-          )
-          ON CONFLICT (tenant_id, job_id) DO UPDATE SET
-            job_id = EXCLUDED.job_id,
-            job = EXCLUDED.job,
-            work_center = EXCLUDED.work_center,
-            customer = EXCLUDED.customer,
-            part = EXCLUDED.part,
-            start_date = EXCLUDED.start_date,
-            due_date = EXCLUDED.due_date,
-            qty_released = EXCLUDED.qty_released,
-            qty_completed = EXCLUDED.qty_completed,
-            hours_to_go = EXCLUDED.hours_to_go,
-            parts_to_go = EXCLUDED.parts_to_go,
-            prod_start_time = EXCLUDED.prod_start_time,
-            prod_end_time = EXCLUDED.prod_end_time,
-            reason = EXCLUDED.reason,
-            root_cause = EXCLUDED.root_cause,
-            accountable = EXCLUDED.accountable,
-            projected = EXCLUDED.projected,
-            timeline = EXCLUDED.timeline,
-            status = EXCLUDED.status,
-            ingested_at = now()
-        `,
-        values
-      )
-    }
-
-    await client.query('COMMIT')
-  } catch (error) {
-    await client.query('ROLLBACK')
-    return res.status(500).json({ ok: false, error: (error as Error).message })
-  } finally {
-    client.release()
-  }
-
-  return res.json({
-    ok: true,
-    inserted: jobs.length,
-    updated: 0,
-    totalRows,
-    jobsImported: jobs.length,
-    warnings,
-    errors,
-    source,
-    importer,
-    detectedHeaders,
-    normalizedHeaders,
-    unknownColumns,
-    schemaVersion,
-    importStats
-  })
 })
 
 const start = async () => {
