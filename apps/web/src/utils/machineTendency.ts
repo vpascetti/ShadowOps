@@ -160,7 +160,7 @@ export function analyzeMachineTendency(
   // Predict issues
   const predictedIssues: string[] = [];
   if (cycleTimeTrend > 5) {
-    predictedIssues.push(`Cycle time increasing (${cycleTimeTrend.toFixed(1)}m/week trend)`);
+    predictedIssues.push(`Cycle time increasing (${cycleTimeTrend.toFixed(0)}s/week trend)`);
   }
   if (errorTrend > 0.03) {
     predictedIssues.push(`Error rate degrading (${(errorTrend * 100).toFixed(1)}% trend)`);
@@ -250,7 +250,7 @@ const analyzeRealtimeMachines = (realtime: RealtimePartNumber[]): MachineTendenc
 
     const predictedIssues: string[] = []
     if (cycleTrend > 2) {
-      predictedIssues.push(`Cycle drift ${cycleTrend.toFixed(1)}m above standard`)
+      predictedIssues.push(`Cycle drift ${cycleTrend.toFixed(0)}s above standard`)
     }
     if (downHours > 0) {
       predictedIssues.push(`Down ${downHours.toFixed(1)}h this shift`)
@@ -285,7 +285,20 @@ const analyzeRealtimeMachines = (realtime: RealtimePartNumber[]): MachineTendenc
 
 export function analyzeMachines(jobs: any[], realtime: RealtimePartNumber[] = []): MachineTendency[] {
   if (realtime.length > 0) {
-    return analyzeRealtimeMachines(realtime).sort((a, b) => {
+    // Filter realtime data to only include work centers with scheduled jobs
+    const scheduledWorkCenters = new Set<string>();
+    jobs.forEach((job) => {
+      if (job.WorkCenter || job.work_center) {
+        scheduledWorkCenters.add(job.WorkCenter || job.work_center);
+      }
+    });
+
+    // Only analyze machines that have scheduled jobs
+    const filteredRealtime = realtime.filter(
+      (row) => row.work_center && scheduledWorkCenters.has(row.work_center)
+    );
+
+    return analyzeRealtimeMachines(filteredRealtime).sort((a, b) => {
       const healthOrder = { critical: 0, warning: 1, healthy: 2, unknown: 3 }
       const healthDiff = healthOrder[a.current_health] - healthOrder[b.current_health]
       if (healthDiff !== 0) return healthDiff

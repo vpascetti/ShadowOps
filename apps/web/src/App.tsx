@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import './App.css'
 import LegacyDashboard from './LegacyDashboard'
 import FinancialSummary from './components/FinancialSummary'
+import PlantPulse from './components/PlantPulse'
 
 type Job = {
   job_id: string
@@ -41,7 +42,7 @@ const buildQuery = (params: Record<string, string>) => {
 }
 
 export default function App() {
-  const [view, setView] = useState<'phase1' | 'legacy' | 'financial'>('legacy')
+  const [view, setView] = useState<'phase1' | 'legacy' | 'financial' | 'plant-pulse'>('legacy')
   const [jobs, setJobs] = useState<Job[]>([])
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null)
   const [selectedJob, setSelectedJob] = useState<JobDetail | null>(null)
@@ -122,7 +123,11 @@ export default function App() {
   }
 
   if (view === 'legacy') {
-    return <LegacyDashboard onExit={() => setView('phase1')} onFinancial={() => setView('financial')} />
+    return <LegacyDashboard 
+      onExit={() => setView('phase1')} 
+      onFinancial={() => setView('financial')}
+      onPlantPulse={() => setView('plant-pulse')}
+    />
   }
 
   if (view === 'financial') {
@@ -150,6 +155,10 @@ export default function App() {
         </button>
       </div>
     )
+  }
+
+  if (view === 'plant-pulse') {
+    return <PlantPulse onBack={() => setView('legacy')} />
   }
 
   return (

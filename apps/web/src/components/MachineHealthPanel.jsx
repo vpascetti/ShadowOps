@@ -93,10 +93,10 @@ export default function MachineHealthPanel({ jobs = [], realtimeData = [] }) {
             <div className="metrics-compact">
               <div className="metric">
                 <span className="metric-label">Cycle Time:</span>
-                <span className="metric-value">{machine.avg_cycle_time.toFixed(1)}m</span>
+                <span className="metric-value">{machine.avg_cycle_time.toFixed(0)}s</span>
                 {machine.cycle_time_trend !== 0 && (
                   <span className={`metric-trend ${machine.cycle_time_trend > 0 ? 'degrading' : 'improving'}`}>
-                    {machine.cycle_time_trend > 0 ? '↑' : '↓'} {Math.abs(machine.cycle_time_trend).toFixed(1)}m
+                    {machine.cycle_time_trend > 0 ? '↑' : '↓'} {Math.abs(machine.cycle_time_trend).toFixed(0)}s
                   </span>
                 )}
               </div>

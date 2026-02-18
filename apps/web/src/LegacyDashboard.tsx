@@ -342,7 +342,7 @@ function calculateMetrics(jobs) {
 // MAIN APP
 // ============================================================================
 
-export default function LegacyDashboard({ onExit, onFinancial }) {
+export default function LegacyDashboard({ onExit, onFinancial, onPlantPulse }) {
   const [rawJobs, setRawJobs] = useState([])
   const [selectedDate, setSelectedDate] = useState('')
   const [asOfDate, setAsOfDate] = useState(new Date())
@@ -583,6 +583,16 @@ export default function LegacyDashboard({ onExit, onFinancial }) {
                   title="View financial summary"
                 >
                   Financial Summary
+                </button>
+              )}
+              {onPlantPulse && (
+                <button
+                  className="view-toggle-btn plant-pulse-btn"
+                  onClick={onPlantPulse}
+                  style={{ marginLeft: '8px', backgroundColor: '#0a4a6e' }}
+                  title="View machine health & predictive maintenance"
+                >
+                  Plant Pulse
                 </button>
               )}
             </div>
