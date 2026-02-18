@@ -8,6 +8,7 @@
   max-width: 1200px;
   margin: 0 auto;
   min-height: 100vh;
+  background: #f5f5f5;
 }
 
 .financial__header {
@@ -21,7 +22,7 @@
   font-family: 'Space Grotesk', sans-serif;
   font-size: clamp(2.4rem, 3vw, 3.1rem);
   font-weight: 700;
-  color: #10131a;
+  color: #1a1a2e;
   margin: 0;
 }
 
@@ -29,13 +30,13 @@
   letter-spacing: 0.3rem;
   text-transform: uppercase;
   font-size: 0.7rem;
-  color: #5d6674;
+  color: #0066cc;
   margin: 0;
 }
 
 .financial__header .subhead {
   font-size: 1rem;
-  color: #5d6674;
+  color: #666;
   margin: 0;
   max-width: 600px;
 }
@@ -43,10 +44,10 @@
 /* Data Source Selector */
 .financial__data-source {
   padding: 1.25rem;
-  background: #fff8f2;
-  border-radius: 16px;
-  border: 1px solid rgba(16, 19, 26, 0.12);
-  box-shadow: 0 20px 40px -30px rgba(16, 19, 26, 0.35);
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .source-selector {
@@ -57,7 +58,7 @@
 
 .source-selector label {
   font-weight: 600;
-  color: #10131a;
+  color: #1a1a2e;
   margin: 0;
   white-space: nowrap;
   font-size: 0.9rem;
@@ -70,26 +71,26 @@
 
 .source-btn {
   padding: 0.5rem 0.9rem;
-  border: 1px solid rgba(16, 19, 26, 0.12);
+  border: 1px solid #ccc;
   background: #fff;
-  border-radius: 999px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 500;
-  color: #5d6674;
+  color: #666;
   transition: all 0.2s ease;
 }
 
 .source-btn:hover {
-  border-color: #f15a2b;
-  color: #f15a2b;
+  border-color: #0066cc;
+  color: #0066cc;
   transform: translateY(-1px);
 }
 
 .source-btn.active {
-  background: #f15a2b;
+  background: #0066cc;
   color: #fff;
-  border-color: transparent;
+  border-color: #0066cc;
 }
 
 /* Financial Grid */
@@ -103,11 +104,11 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  padding: 1.25rem;
-  background: #fff8f2;
-  border-radius: 16px;
-  border: 1px solid rgba(16, 19, 26, 0.12);
-  box-shadow: 0 20px 40px -30px rgba(16, 19, 26, 0.35);
+  padding: 1.5rem;
+  background: white;
+  border-radius: 8px;
+  border-left: 4px solid #ddd;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
 }
 
@@ -117,27 +118,27 @@
 }
 
 .financial__card--risk {
-  border-left: 4px solid #ff6b6b;
+  border-left-color: #ff6b6b;
 }
 
 .financial__card--delayed {
-  border-left: 4px solid #ffa940;
+  border-left-color: #ffa940;
 }
 
 .financial__card--wip {
-  border-left: 4px solid #13c2c2;
+  border-left-color: #13c2c2;
 }
 
 .financial__card--total {
-  border-left: 4px solid #f15a2b;
+  border-left-color: #0066cc;
 }
 
 .financial__card--ontime {
-  border-left: 4px solid #52c41a;
+  border-left-color: #52c41a;
 }
 
 .financial__card--throughput {
-  border-left: 4px solid #1890ff;
+  border-left-color: #1890ff;
 }
 
 .card__icon {
@@ -147,8 +148,8 @@
 
 .card__label {
   font-size: 0.8rem;
-  font-weight: 500;
-  color: #5d6674;
+  font-weight: 600;
+  color: #666;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: 0;
@@ -157,31 +158,31 @@
 .card__value {
   font-size: 1.8rem;
   font-weight: 700;
-  color: #10131a;
+  color: #1a1a2e;
   margin: 0;
   word-break: break-word;
 }
 
 .card__detail {
   font-size: 0.8rem;
-  color: #5d6674;
+  color: #666;
   margin: 0;
 }
 
 /* Details Section */
 .financial__details {
   padding: 2rem;
-  background: #fff8f2;
-  border-radius: 16px;
-  border: 1px solid rgba(16, 19, 26, 0.12);
-  box-shadow: 0 20px 40px -30px rgba(16, 19, 26, 0.35);
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .financial__details h2 {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 1.3rem;
   font-weight: 700;
-  color: #10131a;
+  color: #1a1a2e;
   margin: 0 0 1.5rem 0;
 }
 
@@ -196,21 +197,21 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background: #fff;
-  border-radius: 12px;
-  border: 1px solid rgba(16, 19, 26, 0.08);
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
 }
 
 .detail__label {
   font-size: 0.9rem;
-  color: #5d6674;
+  color: #666;
   font-weight: 500;
 }
 
 .detail__value {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #10131a;
+  color: #1a1a2e;
 }
 
 .detail__value--warning {
@@ -228,10 +229,10 @@
   padding: 2rem;
   text-align: center;
   font-size: 1.1rem;
-  border-radius: 16px;
-  background: #fff8f2;
-  border: 1px solid rgba(16, 19, 26, 0.12);
-  box-shadow: 0 20px 40px -30px rgba(16, 19, 26, 0.35);
+  border-radius: 8px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .financial__error {
@@ -241,7 +242,7 @@
 }
 
 .financial__empty {
-  color: #5d6674;
+  color: #666;
 }
 
 /* Responsive Design */
