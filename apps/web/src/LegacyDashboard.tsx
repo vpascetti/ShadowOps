@@ -342,7 +342,7 @@ function calculateMetrics(jobs) {
 // MAIN APP
 // ============================================================================
 
-export default function LegacyDashboard({ onExit }) {
+export default function LegacyDashboard({ onExit, onFinancial }) {
   const [rawJobs, setRawJobs] = useState([])
   const [selectedDate, setSelectedDate] = useState('')
   const [asOfDate, setAsOfDate] = useState(new Date())
@@ -355,6 +355,8 @@ export default function LegacyDashboard({ onExit }) {
   const [viewMode, setViewMode] = useState('briefing')
   const [dataSource, setDataSource] = useState('API')
   const [apiError, setApiError] = useState(null)
+  const [realtimeData, setRealtimeData] = useState([])
+  const [realtimeError, setRealtimeError] = useState(null)
 
   const formatDateForInput = (date) => {
     const year = date.getFullYear()
@@ -387,12 +389,22 @@ export default function LegacyDashboard({ onExit }) {
           }
 
           return {
-            Job: r.job_id,
-            WorkCenter: workCenter,
-            StartDate: r.start_date || '',
-            DueDate: r.due_date,
-            QtyReleased: r.qty_released || '',
-            QtyCompleted: r.qty_completed || ''
+            Job: r.Job || r.job_id,
+            Part: r.Part || r.part || '',
+            Customer: r.Customer || r.customer || '',
+            WorkCenter: r.WorkCenter || r.work_center || '',
+            StartDate: r.StartDate || r.start_date || '',
+            DueDate: r.DueDate || r.due_date,
+            QtyReleased: r.QtyReleased || r.qty_released || '',
+            QtyCompleted: r.QtyCompleted || r.qty_completed || '',
+            description: r.description || '',
+            risk_score: r.risk_score || 0,
+            material_exception: r.material_exception || false,
+            MaterialShortage: r.MaterialShortage || r.material_shortage || false,
+            MaterialItem: r.MaterialItem || r.material_item || '',
+            MaterialRequiredQty: r.MaterialRequiredQty || r.material_required_qty || 0,
+            MaterialIssuedQty: r.MaterialIssuedQty || r.material_issued_qty || 0,
+            MaterialShortQty: r.MaterialShortQty || r.material_short_qty || 0
           }
         })
       )
@@ -404,15 +416,33 @@ export default function LegacyDashboard({ onExit }) {
     }
   }
 
+  const loadRealtimeFromApi = async () => {
+    setRealtimeError(null)
+    try {
+      const res = await fetch('/realtime/part-numbers')
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Realtime API error')
+      }
+      const payload = await res.json()
+      setRealtimeData(Array.isArray(payload.data) ? payload.data : [])
+    } catch (err) {
+      setRealtimeError(err.message)
+      setRealtimeData([])
+    }
+  }
+
   useEffect(() => {
     // Load initial data on mount
     loadJobsFromApi('API', 'API: Canonical Provider')
+    loadRealtimeFromApi()
   }, [])
 
   useEffect(() => {
     // Reload data when switching views to ensure it's always available
     if ((viewMode === 'dashboard' || viewMode === 'briefing') && rawJobs.length === 0) {
       loadJobsFromApi('API', 'API: Canonical Provider')
+      loadRealtimeFromApi()
     }
   }, [viewMode, rawJobs.length])
 
@@ -561,11 +591,6 @@ export default function LegacyDashboard({ onExit }) {
               <p className="app-subtitle">Manufacturing Command Hub · Legacy View</p>
             </div>
             <div className="view-toggle">
-              <button className="view-toggle-btn" onClick={onExit}>
-                Back to Phase 1
-              </button>
-            </div>
-            <div className="view-toggle">
               <button
                 className={`view-toggle-btn ${viewMode === 'briefing' ? 'active' : ''}`}
                 onClick={() => setViewMode('briefing')}
@@ -578,6 +603,16 @@ export default function LegacyDashboard({ onExit }) {
               >
                 Operational Dashboard
               </button>
+              {onFinancial && (
+                <button
+                  className="view-toggle-btn financial-btn"
+                  onClick={onFinancial}
+                  style={{ marginLeft: '32px', backgroundColor: '#052e4d' }}
+                  title="View financial summary"
+                >
+                  💰 Financial Summary
+                </button>
+              )}
             </div>
             <div className="data-source-label" style={{ marginLeft: 24, fontWeight: 500, color: '#2b7' }}>
               Data Source: {dataSource}
@@ -601,7 +636,10 @@ export default function LegacyDashboard({ onExit }) {
             loadSummary={loadSummary}
             asOfDate={asOfDate}
           />
-          <MachineHealthPanel jobs={jobs} />
+          <MachineHealthPanel jobs={jobs} realtimeData={realtimeData} />
+          {realtimeError && (
+            <div className="empty-state">Realtime feed error: {realtimeError}</div>
+          )}
           <SuggestedActionsPanel jobs={jobs} />
         </>
       ) : (

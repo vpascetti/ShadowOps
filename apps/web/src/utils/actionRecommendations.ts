@@ -41,7 +41,7 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
     actions.push({
       action_id: `${job.Job}-MAT-${jobIndex}`,
       job_id: job.Job,
-      title: '⚡ Expedite Material Delivery',
+      title: 'Expedite Material Delivery',
       description: `Material shortage detected. Contact supplier to expedite delivery or consider substitutes.`,
       severity: job.status === 'Late' ? 'critical' : 'high',
       impact: {
@@ -60,7 +60,7 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
     actions.push({
       action_id: `${job.Job}-CAP-${jobIndex}`,
       job_id: job.Job,
-      title: '⚙️ Rebalance Work Center Load',
+      title: 'Rebalance Work Center Load',
       description: `${job.WorkCenter} is ${overloadPct}% overbooked. Consider parallel processing or shifting work to alternative centers.`,
       severity: job.status === 'Late' ? 'critical' : 'high',
       impact: {
@@ -77,7 +77,7 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
     actions.push({
       action_id: `${job.Job}-SEQ-${jobIndex}`,
       job_id: job.Job,
-      title: '⏳ Expedite Prerequisite Job',
+      title: 'Expedite Prerequisite Job',
       description: `This job is blocked by an upstream job that's running late. Prioritize the dependency job first.`,
       severity: 'high',
       impact: {
@@ -94,7 +94,7 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
     actions.push({
       action_id: `${job.Job}-QA-${jobIndex}`,
       job_id: job.Job,
-      title: '🚫 Resolve Quality Hold',
+      title: 'Resolve Quality Hold',
       description: `Job is on quality hold. Investigate root cause and clear hold to resume production.`,
       severity: 'critical',
       impact: {
@@ -111,7 +111,7 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
     actions.push({
       action_id: `${job.Job}-MTN-${jobIndex}`,
       job_id: job.Job,
-      title: '🔴 Repair Equipment or Route Elsewhere',
+      title: 'Repair Equipment or Route Elsewhere',
       description: `${job.WorkCenter} is down or running slow. Schedule maintenance or route this job to an alternative work center.`,
       severity: 'critical',
       impact: {
@@ -128,7 +128,7 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
     actions.push({
       action_id: `${job.Job}-LATE-${jobIndex}`,
       job_id: job.Job,
-      title: '⚠️ Customer Notification Required',
+      title: 'Customer Notification Required',
       description: `Job is past due date. Notify customer of actual completion date and any impact to their order.`,
       severity: 'high',
       impact: {
@@ -145,7 +145,7 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
     actions.push({
       action_id: `${job.Job}-PROJ-${jobIndex}`,
       job_id: job.Job,
-      title: '📅 Adjust Schedule or Add Resources',
+      title: 'Adjust Schedule or Add Resources',
       description: `Current pace projects late completion. Either reschedule the due date or add additional capacity.`,
       severity: job.daysAtRisk && job.daysAtRisk > 1 ? 'high' : 'medium',
       impact: {

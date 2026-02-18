@@ -198,7 +198,102 @@ export function analyzeMachineTendency(
 /**
  * Analyze all machines
  */
-export function analyzeMachines(jobs: any[]): MachineTendency[] {
+type RealtimePartNumber = {
+  work_center?: string
+  work_center_desc?: string
+  item_no?: string
+  description?: string
+  mfg_no?: string
+  parts_to_go?: number
+  hours_left?: number
+  std_cycle?: number
+  last_cycle?: number
+  avg_cycle?: number
+  act_cav?: number
+  std_cav?: number
+  shift_up?: number
+  shift_dwn?: number
+  down_code?: string
+  down_descrip?: string
+  down_start_time?: string
+  has_qc_issues?: boolean
+  qc_issue_count?: number
+  run_qty?: number
+}
+
+const analyzeRealtimeMachines = (realtime: RealtimePartNumber[]): MachineTendency[] => {
+  const byWorkCenter = new Map<string, RealtimePartNumber[]>()
+  realtime.forEach((row) => {
+    if (!row.work_center) return
+    const list = byWorkCenter.get(row.work_center) || []
+    list.push(row)
+    byWorkCenter.set(row.work_center, list)
+  })
+
+  return Array.from(byWorkCenter.entries()).map(([workCenter, rows]) => {
+    const pick = rows[0]
+    const avgCycle = rows.reduce((sum, r) => sum + (r.avg_cycle || 0), 0) / Math.max(rows.length, 1)
+    const stdCycle = rows.reduce((sum, r) => sum + (r.std_cycle || 0), 0) / Math.max(rows.length, 1)
+    const cycleTrend = avgCycle - stdCycle
+    const downHours = rows.reduce((sum, r) => sum + (r.shift_dwn || 0), 0)
+    const upHours = rows.reduce((sum, r) => sum + (r.shift_up || 0), 0)
+    const qcIssues = rows.reduce((sum, r) => sum + (r.qc_issue_count || 0), 0)
+    const runQty = rows.reduce((sum, r) => sum + (r.run_qty || 0), 0)
+    const errorRate = runQty > 0 ? Math.min((qcIssues / runQty) * 100, 100) : (qcIssues > 0 ? 100 : 0)
+
+    let health: MachineHealthStatus = 'healthy'
+    if (downHours >= 3 || cycleTrend > 5 || errorRate >= 10) {
+      health = 'critical'
+    } else if (downHours >= 1 || cycleTrend > 2 || errorRate >= 5) {
+      health = 'warning'
+    }
+
+    const predictedIssues: string[] = []
+    if (cycleTrend > 2) {
+      predictedIssues.push(`Cycle drift ${cycleTrend.toFixed(1)}m above standard`)
+    }
+    if (downHours > 0) {
+      predictedIssues.push(`Down ${downHours.toFixed(1)}h this shift`)
+    }
+    if (errorRate >= 5) {
+      predictedIssues.push(`Quality issues ${errorRate.toFixed(1)}%`)
+    }
+
+    return {
+      resource_id: workCenter,
+      resource_name: pick?.work_center_desc || workCenter,
+      current_health: health,
+      trend: cycleTrend > 5 || errorRate >= 10 ? 'critical' : cycleTrend > 2 || errorRate >= 5 ? 'degrading' : 'stable',
+      trend_confidence: 70,
+      avg_cycle_time: avgCycle || 0,
+      cycle_time_trend: cycleTrend || 0,
+      error_rate: errorRate || 0,
+      error_trend: 0,
+      predicted_downtime_hours: downHours,
+      maintenance_due_in_days: health === 'critical' ? 1 : health === 'warning' ? 5 : 14,
+      history: [],
+      predicted_issues: predictedIssues,
+      recommended_action:
+        health === 'critical'
+          ? 'Dispatch maintenance immediately'
+          : health === 'warning'
+          ? 'Inspect within 48 hours'
+          : 'Continue monitoring'
+    }
+  })
+}
+
+export function analyzeMachines(jobs: any[], realtime: RealtimePartNumber[] = []): MachineTendency[] {
+  if (realtime.length > 0) {
+    return analyzeRealtimeMachines(realtime).sort((a, b) => {
+      const healthOrder = { critical: 0, warning: 1, healthy: 2, unknown: 3 }
+      const healthDiff = healthOrder[a.current_health] - healthOrder[b.current_health]
+      if (healthDiff !== 0) return healthDiff
+      const trendOrder = { critical: 0, degrading: 1, stable: 2, improving: 3 }
+      return trendOrder[a.trend] - trendOrder[b.trend]
+    })
+  }
+
   const workCenters = new Set<string>();
   const machineNames: Record<string, string> = {
     'WC-10': 'Assembly Line A',

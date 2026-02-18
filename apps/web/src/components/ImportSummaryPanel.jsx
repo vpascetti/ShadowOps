@@ -93,7 +93,7 @@ export default function ImportSummaryPanel({ importStats }) {
         <div style={{ marginTop: '1rem' }}>
           <details>
             <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#fd7e14' }}>
-              ⚠️ Warnings ({warnings.length})
+              Warnings ({warnings.length})
             </summary>
             <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem', fontSize: '0.875rem', maxHeight: '200px', overflow: 'auto' }}>
               {warnings.slice(0, 20).map((w, idx) => (
@@ -108,7 +108,7 @@ export default function ImportSummaryPanel({ importStats }) {
       {/* Errors */}
       {errors.length > 0 && (
         <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#f8d7da', borderLeft: '4px solid #dc3545', borderRadius: '4px' }}>
-          <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#842029' }}>🔴 Errors ({errors.length}):</div>
+          <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#842029' }}>Errors ({errors.length}):</div>
           <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#842029' }}>
             {errors.map((e, idx) => (
               <li key={idx}>{e}</li>
@@ -119,7 +119,7 @@ export default function ImportSummaryPanel({ importStats }) {
 
       {!hasIssues && rowsKept > 0 && (
         <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#d1e7dd', borderLeft: '4px solid #198754', borderRadius: '4px', color: '#0f5132' }}>
-          ✓ Import completed successfully with no issues
+          Import completed successfully with no issues
         </div>
       )}
     </div>

@@ -69,9 +69,9 @@ export default function DailyBriefing({
               <div key={alert.id} className={`briefing-alert-item alert-${alert.severity}`}>
                 <div className="briefing-alert-header">
                   <span className="briefing-alert-icon">
-                    {alert.severity === 'critical' && '🔴'}
-                    {alert.severity === 'warning' && '🟠'}
-                    {alert.severity === 'watch' && '🟡'}
+                    {alert.severity === 'critical' && 'Critical'}
+                    {alert.severity === 'warning' && 'Warning'}
+                    {alert.severity === 'watch' && 'Watch'}
                   </span>
                   <div className="briefing-alert-title">{alert.title}</div>
                   <span className="briefing-alert-job">{alert.jobId}</span>
@@ -82,7 +82,7 @@ export default function DailyBriefing({
           </div>
         ) : (
           <div className="briefing-no-alerts">
-            <p>✅ No critical risks detected.</p>
+            <p>No critical risks detected.</p>
           </div>
         )}
       </section>
@@ -172,8 +172,8 @@ function getSeverity(score) {
 }
 
 function getSeverityLabel(score) {
-  if (score >= 10) return '🔴 Critical';
-  if (score >= 5) return '🟠 High';
-  if (score >= 1) return '🟡 Watch';
-  return '🟢 Healthy';
+  if (score >= 10) return 'Critical';
+  if (score >= 5) return 'High';
+  if (score >= 1) return 'Watch';
+  return 'Healthy';
 }

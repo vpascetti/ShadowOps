@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import multer from 'multer'
 import Papa from 'papaparse'
+import oracledb from 'oracledb'
 import { isIQMSScheduleSummaryV1, importIQMSScheduleSummaryV1 } from './iqms_importer.js'
 import { normalizeCsvPayload, CSV_SCHEMA_VERSION } from './csv_contract.js'
 import { normalizeCsvRows, HEADER_ALIASES } from './shadowops_normalizer.js'
@@ -12,6 +13,33 @@ dotenv.config()
 
 const app = express()
 const port = parseInt(process.env.PORT || '5050', 10)
+
+// Oracle connection config
+const ORACLE_CONFIG = {
+  user: process.env.ORACLE_USER,
+  password: process.env.ORACLE_PASSWORD,
+  connectString: process.env.ORACLE_CONNECT_STRING || 
+    (process.env.ORACLE_HOST && `(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=${process.env.ORACLE_HOST})(PORT=${process.env.ORACLE_PORT || 1521}))(CONNECT_DATA=(SID=${process.env.ORACLE_SID})))`)
+}
+
+const IQMS_ENABLED = !!(ORACLE_CONFIG.user && ORACLE_CONFIG.password && ORACLE_CONFIG.connectString)
+
+// Helper to query IQMS directly
+async function queryIQMS(sql) {
+  if (!IQMS_ENABLED) {
+    throw new Error('IQMS not configured. Set ORACLE_USER, ORACLE_PASSWORD, ORACLE_HOST, ORACLE_SID')
+  }
+  let connection
+  try {
+    connection = await oracledb.getConnection(ORACLE_CONFIG)
+    const result = await connection.execute(sql, [], { outFormat: oracledb.OUT_FORMAT_OBJECT })
+    return result.rows || []
+  } finally {
+    if (connection) {
+      try { await connection.close() } catch {}
+    }
+  }
+}
 
 // Setup multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() })
@@ -63,6 +91,132 @@ app.get('/api/demo/jobs', async (req, res) => {
   const sql = `SELECT job_id, job, work_center, customer, part, start_date, due_date, qty_released, qty_completed, hours_to_go, parts_to_go, prod_start_time, prod_end_time, eplant_id, eplant_company, origin, firm, reason, root_cause, accountable, projected, timeline, status FROM jobs WHERE tenant_id = $1 ORDER BY due_date ASC NULLS LAST`
   const result = await query(sql, [tenantId])
   res.json({ ok: true, jobs: result.rows })
+})
+
+// Financial Summary endpoint (queries IQMS live data by default)
+app.get('/api/financial-summary', async (req, res) => {
+  const { tenantId } = await ensureDemoTenantAndToken()
+  const { unitPrice = 100, stdHourlyRate = 75, source = 'auto' } = req.query
+  const uPrice = parseFloat(unitPrice)
+  const hourRate = parseFloat(stdHourlyRate)
+
+  try {
+    let jobs = []
+    let dataSource = 'cached'
+
+    // Try IQMS if available or explicitly requested
+    if ((source === 'auto' && IQMS_ENABLED) || source === 'iqms') {
+      try {
+        console.log('Querying IQMS directly for financial data...')
+        const iqmsJobs = await queryIQMS(`
+          SELECT 
+            w.WORKORDER_ID AS job_id,
+            w.JOB AS job,
+            w.WORK_CENTER AS work_center,
+            w.CYCLES_REQ AS qty_released,
+            GREATEST(0, LEAST(w.CYCLES_REQ, w.CYCLES_REQ - NVL(parts.parts_to_go, 0))) AS qty_completed,
+            vsh.HOURS_TO_GO AS hours_to_go,
+            w.MUST_SHIP_DATE AS ship_date,
+            COALESCE(w.MUST_SHIP_DATE, w.PROMISE_DATE, w.END_TIME) AS due_date,
+            CASE 
+              WHEN COALESCE(w.MUST_SHIP_DATE, w.PROMISE_DATE, w.END_TIME) < SYSDATE THEN 'closed'
+              ELSE 'open'
+            END AS status
+          FROM WORKORDER w
+            LEFT JOIN V_SCHED_HRS_TO_GO vsh ON vsh.WORKORDER_ID = w.WORKORDER_ID
+            LEFT JOIN V_SCHED_PARTS_TO_GO parts ON parts.WORKORDER_ID = w.WORKORDER_ID
+          WHERE ROWNUM <= 10000
+        `)
+        jobs = iqmsJobs.map(row => ({
+          job_id: row.JOB_ID,
+          qty_released: parseFloat(row.QTY_RELEASED) || 0,
+          qty_completed: parseFloat(row.QTY_COMPLETED) || 0,
+          hours_to_go: parseFloat(row.HOURS_TO_GO) || 0,
+          due_date: row.DUE_DATE,
+          status: row.STATUS
+        }))
+        dataSource = 'iqms'
+      } catch (iqmsErr) {
+        if (source === 'iqms') {
+          throw new Error(`IQMS query failed: ${iqmsErr.message}`)
+        }
+        console.warn('IQMS unavailable, falling back to cached DB:', iqmsErr.message)
+      }
+    }
+
+    // Fallback to cached database
+    if (source === 'cached' || (source === 'auto' && jobs.length === 0)) {
+      const result = await query(
+        `SELECT job_id, qty_released, qty_completed, hours_to_go, due_date, status FROM jobs WHERE tenant_id = $1`,
+        [tenantId]
+      )
+      jobs = result.rows.map(row => ({
+        job_id: row.job_id,
+        qty_released: parseFloat(row.qty_released) || 0,
+        qty_completed: parseFloat(row.qty_completed) || 0,
+        hours_to_go: parseFloat(row.hours_to_go) || 0,
+        due_date: row.due_date,
+        status: row.status
+      }))
+      dataSource = 'cached'
+    }
+
+    // Calculate financial metrics from the job data
+    const totalJobs = jobs.length
+    const completedJobs = jobs.filter(j => j.status === 'closed').length
+    const totalQtyReleased = jobs.reduce((sum, j) => sum + j.qty_released, 0)
+    const totalQtyCompleted = jobs.reduce((sum, j) => sum + j.qty_completed, 0)
+    const totalHoursRemaining = jobs.reduce((sum, j) => sum + j.hours_to_go, 0)
+    
+    const now = new Date()
+    const overdueCount = jobs.filter(j => j.due_date && new Date(j.due_date) < now).length
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    const dueSoonCount = jobs.filter(j => 
+      j.due_date && 
+      new Date(j.due_date) >= now && 
+      new Date(j.due_date) <= sevenDaysFromNow
+    ).length
+    
+    const wipQty = jobs.reduce((sum, j) => sum + (j.qty_released - j.qty_completed), 0)
+
+    // Calculate financial metrics
+    const revenueAtRisk = totalQtyReleased * uPrice
+    const delayedOrderImpact = (overdueCount + dueSoonCount) * (uPrice * 100) // avg 100 units per order
+    const resourceCosts = totalHoursRemaining * hourRate
+    const wipValue = wipQty * uPrice
+    const onTimeDeliveryPct = totalJobs > 0 ? ((completedJobs / totalJobs) * 100) : 0
+    const throughput = totalHoursRemaining > 0 ? (totalQtyCompleted / totalHoursRemaining) : 0
+
+    res.json({
+      ok: true,
+      dataSource,
+      summary: {
+        revenueAtRisk: parseFloat(revenueAtRisk.toFixed(2)),
+        delayedOrderImpact: parseFloat(delayedOrderImpact.toFixed(2)),
+        resourceCosts: parseFloat(resourceCosts.toFixed(2)),
+        wipValue: parseFloat(wipValue.toFixed(2)),
+        onTimeDeliveryPct: parseFloat(onTimeDeliveryPct.toFixed(2)),
+        throughput: parseFloat(throughput.toFixed(4))
+      },
+      metrics: {
+        totalJobs,
+        completedJobs,
+        totalQtyReleased,
+        totalQtyCompleted,
+        totalHoursRemaining,
+        overdueCount,
+        dueSoonCount,
+        wipQty
+      },
+      assumptions: {
+        unitPrice: uPrice,
+        stdHourlyRate: hourRate
+      }
+    })
+  } catch (err) {
+    console.error('Financial summary error:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
 })
 
 // Ingest jobs for tenant

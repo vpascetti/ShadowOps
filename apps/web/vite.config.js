@@ -34,6 +34,20 @@ export default defineConfig({
         timeout: 0,
         proxyTimeout: 0,
       },
+      '/realtime': {
+        target: 'http://localhost:5050',
+        changeOrigin: true,
+        secure: false,
+        timeout: 0,
+        proxyTimeout: 0,
+      },
+      '/financial-summary': {
+        target: 'http://localhost:5050',
+        changeOrigin: true,
+        secure: false,
+        timeout: 0,
+        proxyTimeout: 0,
+      },
     },
   },
 })

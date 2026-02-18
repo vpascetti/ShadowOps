@@ -7,15 +7,15 @@ export default function AlertsPanel({ alerts }) {
 
   return (
     <div className="alerts-panel">
-      <h3 className="alerts-title">⚠️ ShadowOps Alerts</h3>
+      <h3 className="alerts-title">ShadowOps Alerts</h3>
       <div className="alerts-list">
         {alerts.map((alert) => (
           <div key={alert.id} className={`alert-item alert-${alert.severity}`}>
             <div className="alert-header">
               <span className={`alert-icon alert-icon-${alert.severity}`}>
-                {alert.severity === 'critical' && '🔴'}
-                {alert.severity === 'warning' && '🟠'}
-                {alert.severity === 'watch' && '🟡'}
+                {alert.severity === 'critical' && 'Critical'}
+                {alert.severity === 'warning' && 'Warning'}
+                {alert.severity === 'watch' && 'Watch'}
               </span>
               <span className="alert-title-text">{alert.title}</span>
               <span className="alert-badge">{alert.jobId}</span>

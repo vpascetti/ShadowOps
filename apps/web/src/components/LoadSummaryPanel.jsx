@@ -7,7 +7,7 @@ export default function LoadSummaryPanel({ loadSummary }) {
 
   return (
     <div className="load-summary-panel">
-      <h3 className="load-summary-title">📊 WorkCenter Load Summary</h3>
+      <h3 className="load-summary-title">WorkCenter Load Summary</h3>
       <div className="load-summary-container">
         <div className="load-summary-cards">
           {loadSummary.map((wc) => (
@@ -55,8 +55,8 @@ function getLoadSeverity(score) {
 }
 
 function getLoadLabel(score) {
-  if (score >= 10) return '🔴 Critical';
-  if (score >= 5) return '🟠 High';
-  if (score >= 1) return '🟡 Watch';
-  return '🟢 Healthy';
+  if (score >= 10) return 'Critical';
+  if (score >= 5) return 'High';
+  if (score >= 1) return 'Watch';
+  return 'Healthy';
 }

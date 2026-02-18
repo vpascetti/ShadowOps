@@ -272,32 +272,8 @@ export default function DashboardView({
   return (
     <div className="dashboard-view">
       <div className="app-container">
-        {/* Left Section: Upload & Instructions */}
-        <section className="upload-section">
-          <h2>Upload Jobs CSV</h2>
-          <p className="instructions">
-            Upload a CSV (schema v1.0) with Job, Part, Customer, WorkCenter, StartDate, DueDate. Common aliases like "Work Center" or "WC" are accepted.
-          </p>
-
-          <div className="file-input-wrapper">
-            <input
-              type="file"
-              accept=".csv"
-              id="csv-file-input"
-              onChange={handleFileUpload}
-              style={{ display: 'none' }}
-              disabled={uploadLoading}
-            />
-            <label
-              htmlFor="csv-file-input"
-              className={`file-input-label ${uploadLoading ? 'loading' : ''}`}
-            >
-              {uploadLoading ? 'Uploading…' : 'Choose CSV File'}
-            </label>
-            {fileName && <p className="file-name">Loaded: {fileName}</p>}
-          </div>
-
-          {/* Date Picker */}
+        {/* Frozen Date Mode - Top Section */}
+        <section className="frozen-date-section" style={{ width: '100%', marginBottom: '2rem' }}>
           <div className="date-picker-section">
             <h3>Frozen Date Mode</h3>
             <p className="instructions">Analyze jobs as if it were any date:</p>
@@ -316,8 +292,8 @@ export default function DashboardView({
           </div>
         </section>
 
-        {/* Right Section: Metrics & Table */}
-        <section className="metrics-section">
+        {/* Metrics & Table - Full Width Below */}
+        <section className="metrics-section" style={{ width: '100%' }}>
           {jobs.length > 0 ? (
             <>
               {/* Metrics Cards */}
@@ -427,7 +403,7 @@ export default function DashboardView({
 
               {/* Jobs Table */}
               <section ref={jobsTableRef} className="table-wrapper">
-                <div className="column-reorder-hint">💡 Drag column headers to reorder</div>
+                <div className="column-reorder-hint">Drag column headers to reorder</div>
                 <table className="jobs-table">
                   <thead>
                     <tr>

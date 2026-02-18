@@ -72,6 +72,15 @@
   font-weight: 700;
   font-size: 1.1rem;
   color: #1a1a2e;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.expand-icon {
+  font-size: 0.8rem;
+  color: #666;
+  transition: transform 0.2s ease;
 }
 
 .shortage-severity {
@@ -125,4 +134,104 @@
 
 .shortage-date {
   color: #0369a1;
+}
+
+.material-breakdown {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.material-breakdown h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  color: #1a1a2e;
+}
+
+.loading-materials,
+.no-materials {
+  padding: 1rem;
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.materials-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.materials-table thead {
+  background: #f3f4f6;
+}
+
+.materials-table th {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #d1d5db;
+  white-space: nowrap;
+}
+
+.materials-table th:nth-child(3),
+.materials-table th:nth-child(4),
+.materials-table th:nth-child(5) {
+  text-align: right;
+}
+
+.materials-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+}
+
+.materials-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.materials-table tbody tr.has-shortage {
+  background: #fef2f2;
+}
+
+.materials-table tbody tr.has-shortage:hover {
+  background: #fee2e2;
+}
+
+.materials-table .item-no {
+  font-weight: 600;
+  color: #1a1a2e;
+  white-space: nowrap;
+}
+
+.materials-table .material-desc {
+  color: #666;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.materials-table .qty-required,
+.materials-table .qty-onhand {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  white-space: nowrap;
+  padding-right: 1rem;
+}
+
+.materials-table .qty-short {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #dc2626;
+  white-space: nowrap;
+  padding-right: 1rem;
+}
+
+.materials-table .prod-date {
+  color: #666;
+  font-size: 0.8rem;
 }

@@ -32,7 +32,7 @@ export default function RunListPanel({ runList }) {
 
   return (
     <div className="run-list-panel">
-      <h3 className="run-list-title">🎯 WorkCenter Priority Run List</h3>
+      <h3 className="run-list-title">WorkCenter Priority Run List</h3>
       <div className="run-list-grid">
         {relevantWCs.map((wc) => (
           <div key={wc.workCenter} className="run-list-wc-card">

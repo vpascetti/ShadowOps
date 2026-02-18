@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import './App.css'
 import LegacyDashboard from './LegacyDashboard'
+import FinancialSummary from './components/FinancialSummary'
 
 type Job = {
   job_id: string
@@ -40,7 +41,7 @@ const buildQuery = (params: Record<string, string>) => {
 }
 
 export default function App() {
-  const [view, setView] = useState<'phase1' | 'legacy'>('legacy')
+  const [view, setView] = useState<'phase1' | 'legacy' | 'financial'>('legacy')
   const [jobs, setJobs] = useState<Job[]>([])
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null)
   const [selectedJob, setSelectedJob] = useState<JobDetail | null>(null)
@@ -50,7 +51,7 @@ export default function App() {
   const [uploading, setUploading] = useState(false)
   const [reloadToken, setReloadToken] = useState(0)
 
-  const [statusFilter, setStatusFilter] = useState('open')
+  const [statusFilter, setStatusFilter] = useState('')
   const [dueStart, setDueStart] = useState('')
   const [dueEnd, setDueEnd] = useState('')
   const [resourceFilter, setResourceFilter] = useState('')
@@ -152,7 +153,34 @@ export default function App() {
   }
 
   if (view === 'legacy') {
-    return <LegacyDashboard onExit={() => setView('phase1')} />
+    return <LegacyDashboard onExit={() => setView('phase1')} onFinancial={() => setView('financial')} />
+  }
+
+  if (view === 'financial') {
+    return (
+      <div className="page">
+        <FinancialSummary />
+        <button 
+          onClick={() => setView('legacy')} 
+          style={{
+            position: 'fixed',
+            bottom: '2rem',
+            right: '2rem',
+            padding: '0.75rem 1.5rem',
+            backgroundColor: '#0066cc',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            fontWeight: 600,
+            zIndex: 100
+          }}
+        >
+          ← Back to Dashboard
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -162,12 +190,6 @@ export default function App() {
           <p className="eyebrow">ShadowOps</p>
           <h1>Early Warning Board</h1>
           <p className="subhead">Risk-ranked jobs with ERP-neutral language.</p>
-        </div>
-        <div className="view-switch">
-          <button className="view-switch__button view-switch__button--active">Phase 1 View</button>
-          <button className="view-switch__button" onClick={() => setView('legacy')}>
-            Legacy Dashboard
-          </button>
         </div>
       </header>
 

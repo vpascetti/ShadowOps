@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import multer from 'multer'
 import Papa from 'papaparse'
 import { getProvider } from './providers/index.js'
+import type { RealtimePartNumber, JobMaterialDetail } from './providers/iqmsOracleProvider.js'
 import { ensureDemoTenantAndToken, initDB, pool } from '../db.js'
 import { isIQMSScheduleSummaryV1, importIQMSScheduleSummaryV1 } from '../iqms_importer.js'
 import { normalizeCsvRows } from '../shadowops_normalizer.js'
@@ -27,6 +28,14 @@ const deriveJobId = (jobValue: unknown) => {
 
 app.use(cors())
 app.use(express.json())
+
+// Prevent API response caching
+app.use((_req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  res.set('Pragma', 'no-cache')
+  res.set('Expires', '0')
+  next()
+})
 
 app.get('/health', (_req, res) => {
   res.json({
@@ -69,6 +78,106 @@ app.get('/metrics/summary', async (_req, res) => {
     res.json({ ok: true, metrics })
   } catch (error) {
     res.status(500).json({ ok: false, error: (error as Error).message })
+  }
+})
+
+app.get('/financial-summary', async (req, res) => {
+  try {
+    const unitPrice = parseFloat(String(req.query.unitPrice || 100))
+    const stdHourlyRate = parseFloat(String(req.query.stdHourlyRate || 75))
+
+    // Set a 10-second timeout for the query
+    const timeoutPromise = new Promise<never>((_resolve, reject) => {
+      setTimeout(() => reject(new Error('Financial summary query timeout - taking too long')), 10000)
+    })
+
+    // Fetch all jobs to calculate financial metrics (race against timeout)
+    const jobs = await Promise.race([
+      provider.getJobs({}),
+      timeoutPromise
+    ])
+
+    // Calculate metrics based on available Job fields
+    const totalJobs = jobs.length
+    const completedJobs = jobs.filter((j: any) => j.status === 'closed').length
+    const totalRemainingWork = jobs.reduce((sum: number, j: any) => sum + (parseFloat(j.remaining_work) || 0), 0)
+
+    const now = new Date()
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+    const overdueCount = jobs.filter((j: any) => {
+      const dueDate = j.due_date ? new Date(j.due_date) : null
+      return dueDate && dueDate < now
+    }).length
+
+    const dueSoonCount = jobs.filter((j: any) => {
+      const dueDate = j.due_date ? new Date(j.due_date) : null
+      return dueDate && dueDate >= now && dueDate <= sevenDaysFromNow
+    }).length
+
+    const atRiskJobs = jobs.filter((j: any) => j.risk_score >= 70)
+    const atRiskValue = atRiskJobs.length * (unitPrice * 100) // estimate 100 units per job
+
+    // Calculate financial metrics
+    const revenueAtRisk = atRiskValue
+    const delayedOrderImpact = (overdueCount + dueSoonCount) * (unitPrice * 100)
+    const resourceCosts = totalRemainingWork * stdHourlyRate
+    const onTimeDeliveryPct = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0
+
+    res.json({
+      ok: true,
+      dataSource: 'live',
+      summary: {
+        revenueAtRisk: parseFloat(revenueAtRisk.toFixed(2)),
+        delayedOrderImpact: parseFloat(delayedOrderImpact.toFixed(2)),
+        resourceCosts: parseFloat(resourceCosts.toFixed(2)),
+        wipValue: parseFloat((totalRemainingWork * unitPrice).toFixed(2)),
+        onTimeDeliveryPct: parseFloat(onTimeDeliveryPct.toFixed(2)),
+        throughput: 0 // Not available in current schema
+      },
+      metrics: {
+        totalJobs,
+        completedJobs,
+        totalRemainingWork: parseFloat(totalRemainingWork.toFixed(2)),
+        overdueCount,
+        dueSoonCount,
+        atRiskCount: atRiskJobs.length
+      },
+      assumptions: {
+        unitPrice,
+        stdHourlyRate
+      }
+    })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: (error as Error).message })
+  }
+})
+
+app.get('/realtime/part-numbers', async (_req, res) => {
+  try {
+    const realtime = (provider as { getRealtimePartNumbers?: () => Promise<RealtimePartNumber[]> })
+      .getRealtimePartNumbers
+    if (!realtime) {
+      return res.json({ ok: true, data: [] })
+    }
+    const data = await realtime()
+    return res.json({ ok: true, data })
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: (error as Error).message })
+  }
+})
+
+app.get('/jobs/:id/materials', async (req, res) => {
+  try {
+    const getMaterials = (provider as { getJobMaterialsDetail?: (jobId: string) => Promise<JobMaterialDetail[]> })
+      .getJobMaterialsDetail
+    if (!getMaterials) {
+      return res.json({ ok: true, materials: [] })
+    }
+    const materials = await getMaterials(req.params.id)
+    return res.json({ ok: true, materials })
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: (error as Error).message })
   }
 })
 

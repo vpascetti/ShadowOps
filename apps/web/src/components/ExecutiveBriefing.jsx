@@ -49,7 +49,7 @@ function computeDrivers(jobs = [], loadSummary = [], asOfDate = new Date(), impo
     .sort((a, b) => ((b.lateJobs || 0) + (b.atRiskJobs || 0)) - ((a.lateJobs || 0) + (a.atRiskJobs || 0)))[0]
 
   const materialCount = riskJobs.filter((j) => getShortageInfo(j, importStats).shortageFlag).length
-  const hasSignals = datasetHasShortageSignals(importStats)
+  const hasSignals = datasetHasShortageSignals(importStats, jobs)
 
   const nearTermCount = jobs.filter((j) => {
     const due = parseDue(j.DueDate)

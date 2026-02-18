@@ -29,17 +29,17 @@ function Sparkline({ data = [], color = '#1976d2' }) {
   );
 }
 
-export default function MachineHealthPanel({ jobs = [] }) {
+export default function MachineHealthPanel({ jobs = [], realtimeData = [] }) {
   if (!jobs || jobs.length === 0) {
     return (
       <section className="machine-health-panel">
-        <h3>🤖 Machine Health & Predictive Maintenance</h3>
-        <p className="empty-state">No jobs loaded yet. Upload a CSV to see machine predictions.</p>
+        <h3>Machine Health & Predictive Maintenance</h3>
+        <p className="empty-state">No jobs loaded yet. Connect to IQMS to see machine predictions.</p>
       </section>
     );
   }
 
-  const machines = analyzeMachines(jobs);
+  const machines = analyzeMachines(jobs, realtimeData);
 
   const getCriticalCount = () => machines.filter((m) => m.current_health === 'critical').length;
   const getWarningCount = () => machines.filter((m) => m.current_health === 'warning').length;
@@ -47,7 +47,7 @@ export default function MachineHealthPanel({ jobs = [] }) {
   return (
     <section className="machine-health-panel">
       <div className="health-header">
-        <h3>🤖 Machine Health & Predictive Maintenance</h3>
+        <h3>Machine Health & Predictive Maintenance</h3>
         <div className="health-counts">
           {getCriticalCount() > 0 && (
             <span className="count critical">{getCriticalCount()} Critical</span>
@@ -70,10 +70,10 @@ export default function MachineHealthPanel({ jobs = [] }) {
             <div className="machine-header">
               <div className="machine-name">{machine.resource_name || machine.resource_id}</div>
               <div className={`health-indicator health-${machine.current_health}`}>
-                {machine.current_health === 'critical' && '🔴'}
-                {machine.current_health === 'warning' && '🟡'}
-                {machine.current_health === 'healthy' && '🟢'}
-                {machine.current_health === 'unknown' && '⚪'}
+                {machine.current_health === 'critical' && 'Critical'}
+                {machine.current_health === 'warning' && 'Warning'}
+                {machine.current_health === 'healthy' && 'Healthy'}
+                {machine.current_health === 'unknown' && 'Unknown'}
               </div>
             </div>
 
@@ -81,10 +81,10 @@ export default function MachineHealthPanel({ jobs = [] }) {
             <div className="trend-row">
               <div className="trend-label">Trend:</div>
               <div className={`trend-badge trend-${machine.trend}`}>
-                {machine.trend === 'improving' && '📈 Improving'}
-                {machine.trend === 'stable' && '➡️ Stable'}
-                {machine.trend === 'degrading' && '📉 Degrading'}
-                {machine.trend === 'critical' && '⚠️ Critical'}
+                {machine.trend === 'improving' && 'Improving'}
+                {machine.trend === 'stable' && 'Stable'}
+                {machine.trend === 'degrading' && 'Degrading'}
+                {machine.trend === 'critical' && 'Critical'}
                 <span className="confidence">({machine.trend_confidence}%)</span>
               </div>
             </div>
@@ -112,10 +112,19 @@ export default function MachineHealthPanel({ jobs = [] }) {
               </div>
             </div>
 
+            {machine.predicted_downtime_hours > 0 && (
+              <div className="trend-row">
+                <div className="trend-label">Downtime:</div>
+                <div className="trend-badge trend-critical">
+                  {machine.predicted_downtime_hours.toFixed(1)}h this shift
+                </div>
+              </div>
+            )}
+
             {/* Predicted issues */}
             {machine.predicted_issues.length > 0 && (
               <div className="predicted-issues">
-                <div className="issues-label">⚠️ Predicted Issues:</div>
+                <div className="issues-label">Predicted Issues:</div>
                 <ul className="issues-list">
                   {machine.predicted_issues.slice(0, 2).map((issue, idx) => (
                     <li key={idx}>{issue}</li>

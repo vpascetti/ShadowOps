@@ -16,8 +16,8 @@ export default function SuggestedActionsPanel({ jobs = [] }) {
   if (!jobs || jobs.length === 0) {
     return (
       <section className="suggested-actions-panel">
-        <h2>🎯 Suggested Actions</h2>
-        <p className="empty-state">No jobs loaded yet. Upload a CSV to see recommended actions.</p>
+        <h2>Suggested Actions</h2>
+        <p className="empty-state">No jobs loaded yet. Connect to IQMS to see recommended actions.</p>
       </section>
     );
   }
@@ -27,8 +27,8 @@ export default function SuggestedActionsPanel({ jobs = [] }) {
   if (actions.length === 0) {
     return (
       <section className="suggested-actions-panel">
-        <h2>🎯 Suggested Actions</h2>
-        <p className="all-clear">✅ All jobs on track. No corrective actions needed.</p>
+        <h2>Suggested Actions</h2>
+        <p className="all-clear">All jobs on track. No corrective actions needed.</p>
       </section>
     );
   }
@@ -39,7 +39,7 @@ export default function SuggestedActionsPanel({ jobs = [] }) {
   return (
     <section className="suggested-actions-panel">
       <div className="actions-header">
-        <h2>🎯 Suggested Actions</h2>
+        <h2>Suggested Actions</h2>
         <div className="action-counts">
           {getCriticalCount() > 0 && (
             <span className="count critical">
