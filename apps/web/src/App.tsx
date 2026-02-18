@@ -3,6 +3,7 @@ import './App.css'
 import LegacyDashboard from './LegacyDashboard'
 import FinancialSummary from './components/FinancialSummary'
 import PlantPulse from './components/PlantPulse'
+import UnifiedHeader from './components/UnifiedHeader'
 
 type Job = {
   job_id: string
@@ -42,7 +43,7 @@ const buildQuery = (params: Record<string, string>) => {
 }
 
 export default function App() {
-  const [view, setView] = useState<'phase1' | 'legacy' | 'financial' | 'plant-pulse'>('legacy')
+  const [view, setView] = useState<'phase1' | 'legacy' | 'financial' | 'plant-pulse' | 'briefing' | 'dashboard'>('briefing')
   const [jobs, setJobs] = useState<Job[]>([])
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null)
   const [selectedJob, setSelectedJob] = useState<JobDetail | null>(null)
@@ -55,6 +56,10 @@ export default function App() {
   const [dueStart, setDueStart] = useState('')
   const [dueEnd, setDueEnd] = useState('')
   const [resourceFilter, setResourceFilter] = useState('')
+
+  const handleViewChange = (newView: string) => {
+    setView(newView as any)
+  }
 
   const queryString = useMemo(
     () =>
@@ -122,43 +127,35 @@ export default function App() {
     }
   }
 
-  if (view === 'legacy') {
-    return <LegacyDashboard 
-      onExit={() => setView('phase1')} 
-      onFinancial={() => setView('financial')}
-      onPlantPulse={() => setView('plant-pulse')}
-    />
+  if (view === 'briefing' || view === 'dashboard' || view === 'legacy') {
+    return (
+      <>
+        <UnifiedHeader currentView={view} onViewChange={handleViewChange} />
+        <LegacyDashboard 
+          onExit={() => setView('phase1')} 
+          currentView={view === 'briefing' ? 'briefing' : 'dashboard'}
+          onViewChange={(mode: string) => setView(mode as any)}
+        />
+      </>
+    )
   }
 
   if (view === 'financial') {
     return (
-      <div className="page">
+      <>
+        <UnifiedHeader currentView={view} onViewChange={handleViewChange} />
         <FinancialSummary />
-        <button 
-          onClick={() => setView('legacy')} 
-          style={{
-            position: 'fixed',
-            bottom: '2rem',
-            right: '2rem',
-            padding: '0.75rem 1.5rem',
-            backgroundColor: '#0066cc',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '0.9rem',
-            fontWeight: 600,
-            zIndex: 100
-          }}
-        >
-          ← Back to Dashboard
-        </button>
-      </div>
+      </>
     )
   }
 
   if (view === 'plant-pulse') {
-    return <PlantPulse onBack={() => setView('legacy')} />
+    return (
+      <>
+        <UnifiedHeader currentView={view} onViewChange={handleViewChange} />
+        <PlantPulse />
+      </>
+    )
   }
 
   return (

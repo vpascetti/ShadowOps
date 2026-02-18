@@ -342,7 +342,7 @@ function calculateMetrics(jobs) {
 // MAIN APP
 // ============================================================================
 
-export default function LegacyDashboard({ onExit, onFinancial, onPlantPulse }) {
+export default function LegacyDashboard({ onExit, currentView = 'briefing', onViewChange }) {
   const [rawJobs, setRawJobs] = useState([])
   const [selectedDate, setSelectedDate] = useState('')
   const [asOfDate, setAsOfDate] = useState(new Date())
@@ -352,11 +352,12 @@ export default function LegacyDashboard({ onExit, onFinancial, onPlantPulse }) {
   const [sortOrder, setSortOrder] = useState('asc')
   const [statusFilter, setStatusFilter] = useState('All')
   const [workCenterFilter, setWorkCenterFilter] = useState('All')
-  const [viewMode, setViewMode] = useState('briefing')
   const [dataSource, setDataSource] = useState('API')
   const [apiError, setApiError] = useState(null)
   const [realtimeData, setRealtimeData] = useState([])
   const [realtimeError, setRealtimeError] = useState(null)
+  
+  const viewMode = currentView  // Map currentView to viewMode for existing logic
 
   const formatDateForInput = (date) => {
     const year = date.getFullYear()
@@ -555,54 +556,6 @@ export default function LegacyDashboard({ onExit, onFinancial, onPlantPulse }) {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-content">
-          <div className="header-top">
-            <div className="header-title">
-              <h1 className="app-title">ShadowOps</h1>
-              <p className="app-subtitle">Manufacturing Command Hub · Legacy View</p>
-            </div>
-            <div className="view-toggle">
-              <button
-                className={`view-toggle-btn ${viewMode === 'briefing' ? 'active' : ''}`}
-                onClick={() => setViewMode('briefing')}
-              >
-                Executive Briefing
-              </button>
-              <button
-                className={`view-toggle-btn ${viewMode === 'dashboard' ? 'active' : ''}`}
-                onClick={() => setViewMode('dashboard')}
-              >
-                Operational Dashboard
-              </button>
-              {onFinancial && (
-                <button
-                  className="view-toggle-btn financial-btn"
-                  onClick={onFinancial}
-                  style={{ marginLeft: '32px', backgroundColor: '#052e4d' }}
-                  title="View financial summary"
-                >
-                  Financial Summary
-                </button>
-              )}
-              {onPlantPulse && (
-                <button
-                  className="view-toggle-btn plant-pulse-btn"
-                  onClick={onPlantPulse}
-                  style={{ marginLeft: '8px', backgroundColor: '#0a4a6e' }}
-                  title="View machine health & predictive maintenance"
-                >
-                  Plant Pulse
-                </button>
-              )}
-            </div>
-            <div className="data-source-label" style={{ marginLeft: 24, fontWeight: 500, color: '#2b7' }}>
-              Data Source: {dataSource}
-            </div>
-          </div>
-        </div>
-      </header>
-
       {apiError && (
         <div style={{ color: 'red', fontWeight: 600, margin: '1em' }}>
           Error loading jobs from API: {apiError}
@@ -618,10 +571,6 @@ export default function LegacyDashboard({ onExit, onFinancial, onPlantPulse }) {
             loadSummary={loadSummary}
             asOfDate={asOfDate}
           />
-          <MachineHealthPanel jobs={jobs} realtimeData={realtimeData} />
-          {realtimeError && (
-            <div className="empty-state">Realtime feed error: {realtimeError}</div>
-          )}
           <SuggestedActionsPanel jobs={jobs} />
         </>
       ) : (

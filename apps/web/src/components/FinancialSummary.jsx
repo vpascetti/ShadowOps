@@ -52,14 +52,6 @@ export default function FinancialSummary() {
 
   return (
     <div className="financial">
-      <header className="financial__header">
-        <div>
-          <p className="eyebrow">ShadowOps</p>
-          <h1>Financial Summary</h1>
-          <p className="subhead">Executive dashboard for manufacturing financial impact.</p>
-        </div>
-      </header>
-
       <section className="financial__data-source">
         <div className="source-selector">
           <label>Data Source:</label>

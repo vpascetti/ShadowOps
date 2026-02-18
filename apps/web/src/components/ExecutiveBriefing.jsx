@@ -123,10 +123,8 @@ export default function ExecutiveBriefing({ asOfDate, metrics = {}, jobs = [], l
         <header className="briefing-header">
           <div>
             <h2>ShadowOps Executive Briefing</h2>
-            <div className="briefing-sub">As of {formatDate(snapshotLabel)}</div>
-            <div className="briefing-sub">Data source: {sourceLabel}</div>
           </div>
-          <div className="briefing-sub right">Rows: {importStats?.totalRows ?? '—'} · Jobs: {total}</div>
+          <div className="briefing-sub right">Jobs: {total}</div>
         </header>
 
         <section className="briefing-section briefing-cards">

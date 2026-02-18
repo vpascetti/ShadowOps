@@ -8,37 +8,16 @@
 .plant-pulse-header {
   max-width: 1400px;
   margin: 0 auto 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.plant-pulse-header .back-button {
-  background: #334155;
-  border: 1px solid #475569;
+.plant-pulse-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
   color: #e2e8f0;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-  margin-bottom: 1rem;
-  transition: all 0.2s ease;
-}
-
-.plant-pulse-header .back-button:hover {
-  background: #475569;
-  border-color: #64748b;
-}
-
-.plant-pulse-header h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #0066cc;
-  margin: 0 0 0.5rem 0;
-  letter-spacing: -0.025em;
-}
-
-.plant-pulse-header .subtitle {
-  font-size: 1.125rem;
-  color: #94a3b8;
-  margin: 0 0 1rem 0;
+  margin: 0;
 }
 
 .plant-pulse-header .last-updated {

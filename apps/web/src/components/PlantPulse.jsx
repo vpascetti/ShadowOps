@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import MachineHealthPanel from './MachineHealthPanel';
 import '../styles/plant-pulse.css';
 
-export default function PlantPulse({ onBack }) {
+export default function PlantPulse() {
   const [jobs, setJobs] = useState([]);
   const [realtimeData, setRealtimeData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +34,7 @@ export default function PlantPulse({ onBack }) {
       const jobsData = await jobsRes.json();
       const realtimePayload = await realtimeRes.json();
 
-      setJobs(Array.isArray(jobsData) ? jobsData : jobsData.data || []);
+      setJobs(Array.isArray(jobsData) ? jobsData : jobsData.jobs || []);
       setRealtimeData(Array.isArray(realtimePayload.data) ? realtimePayload.data : []);
       setLoading(false);
     } catch (err) {
@@ -47,13 +47,6 @@ export default function PlantPulse({ onBack }) {
   if (loading) {
     return (
       <div className="plant-pulse">
-        <div className="plant-pulse-header">
-          <button className="back-button" onClick={onBack}>
-            ← Back to Dashboard
-          </button>
-          <h1>Plant Pulse</h1>
-          <p className="subtitle">Real-time Machine Health & Predictive Maintenance</p>
-        </div>
         <div className="loading-message">Loading plant data...</div>
       </div>
     );
@@ -62,13 +55,6 @@ export default function PlantPulse({ onBack }) {
   if (error) {
     return (
       <div className="plant-pulse">
-        <div className="plant-pulse-header">
-          <button className="back-button" onClick={onBack}>
-            ← Back to Dashboard
-          </button>
-          <h1>Plant Pulse</h1>
-          <p className="subtitle">Real-time Machine Health & Predictive Maintenance</p>
-        </div>
         <div className="error-message">
           Error loading data: {error}
         </div>
@@ -79,11 +65,7 @@ export default function PlantPulse({ onBack }) {
   return (
     <div className="plant-pulse">
       <div className="plant-pulse-header">
-        <button className="back-button" onClick={onBack}>
-          ← Back to Dashboard
-        </button>
-        <h1>Plant Pulse</h1>
-        <p className="subtitle">Real-time Machine Health & Predictive Maintenance</p>
+        <h2>Real-time Machine Health & Predictive Maintenance</h2>
         <div className="last-updated">
           Last updated: {new Date().toLocaleTimeString()}
         </div>
