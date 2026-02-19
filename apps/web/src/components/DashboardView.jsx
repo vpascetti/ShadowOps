@@ -9,8 +9,8 @@ import LoadSummaryPanel from './LoadSummaryPanel';
 import MaterialShortagePanel from './MaterialShortagePanel';
 import ImportSummaryPanel from './ImportSummaryPanel';
 import SectionNavBar from './SectionNavBar';
+import PlantImpactPanel from './PlantImpactPanel';
 import '../styles/DashboardView.css';
-import { getShortageInfo } from '../utils/shortage.js';
 
 // Helper function to generate reason text for job status
 function getJobReason(job, asOfDate) {
@@ -54,11 +54,14 @@ export default function DashboardView({
   alerts,
   runList,
   loadSummary,
+  plantSummary = [],
   workCenterSummary,
   workCenters,
+  plants = [],
   asOfDate,
   statusFilter,
   workCenterFilter,
+  plantFilter,
   sortField,
   sortOrder,
   selectedDate,
@@ -66,6 +69,7 @@ export default function DashboardView({
   importStats,
   setStatusFilter,
   setWorkCenterFilter,
+  setPlantFilter,
   setSortField,
   setSortOrder,
   handleSort,
@@ -78,6 +82,7 @@ export default function DashboardView({
   const alertsRef = useRef(null);
   const runListRef = useRef(null);
   const loadSummaryRef = useRef(null);
+  const plantImpactRef = useRef(null);
   const materialShortageRef = useRef(null);
   const jobsTableRef = useRef(null);
 
@@ -86,6 +91,7 @@ export default function DashboardView({
     { id: 'Job', label: 'Job', sortable: true },
     { id: 'Part', label: 'Part', sortable: true },
     { id: 'Customer', label: 'Customer', sortable: true },
+    { id: 'Plant', label: 'Plant', sortable: true },
     { id: 'WorkCenter', label: 'WorkCenter', sortable: true },
     { id: 'StartDate', label: 'StartDate', sortable: true },
     { id: 'DueDate', label: 'DueDate', sortable: true },
@@ -94,8 +100,6 @@ export default function DashboardView({
     { id: 'Progress', label: 'Progress', sortable: false },
     { id: 'Status', label: 'Status', sortable: false },
     { id: 'Reason', label: 'Reason', sortable: false },
-    { id: 'RootCause', label: 'Root Cause', sortable: false },
-    { id: 'Accountable', label: 'Accountable', sortable: false },
     { id: 'Projected', label: 'Projected', sortable: false },
     { id: 'Timeline', label: 'Timeline', sortable: false },
   ];
@@ -136,6 +140,8 @@ export default function DashboardView({
         return job.Part || '—';
       case 'Customer':
         return job.Customer || '—';
+      case 'Plant':
+        return job.Plant || job.eplant_company || job.plant_name || job.eplant_id || '—';
       case 'WorkCenter':
         return job.WorkCenter || '—';
       case 'StartDate':
@@ -169,27 +175,6 @@ export default function DashboardView({
             <span className="reason-text">{getJobReason(job, asOfDate)}</span>
           </div>
         );
-      case 'RootCause':
-        {
-          const info = getShortageInfo(job, importStats)
-          return (
-            <div className="root-cause-cell">
-              <span className="issue-text">{info.normalizedRootCause}</span>
-            </div>
-          );
-        }
-      case 'Accountable':
-        {
-          const info = getShortageInfo(job, importStats)
-          return (
-            <div className="accountability-cell">
-              <div className="accountability-info">
-                <div className="responsible">{info.normalizedAccountable}</div>
-                <div className="action-needed"></div>
-              </div>
-            </div>
-          );
-        }
       case 'Projected':
         return (
           <div className="projected-cell">
@@ -233,14 +218,15 @@ export default function DashboardView({
   };
 
   const sections = [
-    { label: 'Alerts', ref: alertsRef },
-    { label: 'Run List', ref: runListRef },
-    { label: 'Load Summary', ref: loadSummaryRef },
-    { label: 'Material Shortages', ref: materialShortageRef },
-    { label: 'Jobs Table', ref: jobsTableRef },
+    { label: 'Critical Issues', ref: alertsRef },
+    { label: 'Schedule & Priority', ref: runListRef },
+    { label: 'Work Center Load', ref: loadSummaryRef },
+    { label: 'Plant Performance', ref: plantImpactRef },
+    { label: 'Material Status', ref: materialShortageRef },
+    { label: 'All Jobs', ref: jobsTableRef },
   ];
 
-  const [activeSection, setActiveSection] = useState('Alerts');
+  const [activeSection, setActiveSection] = useState('Critical Issues');
 
   useEffect(() => {
     const refs = [alertsRef, runListRef, loadSummaryRef, materialShortageRef, jobsTableRef];
@@ -320,6 +306,13 @@ export default function DashboardView({
                   value={metrics.late} 
                   color="red" 
                   tooltip="Jobs past their due date"
+                  onClick={() => {
+                    setStatusFilter('Late')
+                    setPlantFilter('All')
+                    if (plantImpactRef.current) {
+                      plantImpactRef.current.scrollIntoView({ behavior: 'smooth' })
+                    }
+                  }}
                 />
               </div>
 
@@ -372,6 +365,22 @@ export default function DashboardView({
                     ))}
                   </select>
                 </div>
+
+                <div className="filter-group">
+                  <label>Plant:</label>
+                  <select
+                    className="filter-dropdown"
+                    value={plantFilter}
+                    onChange={(e) => setPlantFilter(e.target.value)}
+                  >
+                    <option value="All">All Plants</option>
+                    {plants.map((plant) => (
+                      <option key={plant} value={plant}>
+                        {plant}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Section Navigation Bar */}
@@ -393,6 +402,14 @@ export default function DashboardView({
               {/* Load Summary Panel */}
               <section ref={loadSummaryRef}>
                 <LoadSummaryPanel loadSummary={loadSummary} />
+              </section>
+
+              {/* Plant Impact Panel */}
+              <section ref={plantImpactRef}>
+                <PlantImpactPanel
+                  plantSummary={plantSummary}
+                  onSelectPlant={(plant) => setPlantFilter(plant)}
+                />
               </section>
 
               {/* Material Shortages Panel */}

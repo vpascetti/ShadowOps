@@ -13,6 +13,12 @@
   --warning: #f59e0b;
   --success: #16a34a;
   --focus: #3b82f6;
+  --brand-soft: rgba(31, 59, 122, 0.12);
+  --brand-2-soft: rgba(43, 127, 95, 0.14);
+  --danger-soft: rgba(220, 38, 38, 0.12);
+  --warning-soft: rgba(245, 158, 11, 0.18);
+  --success-soft: rgba(22, 163, 74, 0.14);
+  --muted-soft: rgba(148, 163, 184, 0.2);
 
   /* Radii */
   --radius-sm: 6px;

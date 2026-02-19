@@ -5,13 +5,11 @@ export default function FinancialSummary() {
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [dataSource, setDataSource] = useState('auto')
-
-  const fetchSummary = async (source = dataSource) => {
+  const fetchSummary = async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/financial-summary?source=${source}`)
+      const res = await fetch('/financial-summary')
       const data = await res.json()
       if (!data.ok) throw new Error(data.error || 'Failed to fetch financial summary')
       setSummary(data)
@@ -25,11 +23,6 @@ export default function FinancialSummary() {
   useEffect(() => {
     fetchSummary()
   }, [])
-
-  const handleSourceChange = (newSource) => {
-    setDataSource(newSource)
-    fetchSummary(newSource)
-  }
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-US', {
@@ -48,39 +41,10 @@ export default function FinancialSummary() {
   if (error) return <div className="financial__error">Error: {error}</div>
   if (!summary) return <div className="financial__empty">No financial data available</div>
 
-  const { summary: fin, metrics, dataSource: activeDataSource } = summary
+  const { summary: fin, metrics } = summary
 
   return (
     <div className="financial">
-      <section className="financial__data-source">
-        <div className="source-selector">
-          <label>Data Source:</label>
-          <div className="source-buttons">
-            <button
-              className={`source-btn ${dataSource === 'auto' ? 'active' : ''}`}
-              onClick={() => handleSourceChange('auto')}
-              title="Auto-select between IQMS (live) and cached database"
-            >
-              Auto {activeDataSource === 'iqms' && '(IQMS Live)' || activeDataSource === 'cached' && '(Cached)'}
-            </button>
-            <button
-              className={`source-btn ${dataSource === 'iqms' ? 'active' : ''}`}
-              onClick={() => handleSourceChange('iqms')}
-              title="Query IQMS directly for real-time data"
-            >
-              IQMS Live
-            </button>
-            <button
-              className={`source-btn ${dataSource === 'cached' ? 'active' : ''}`}
-              onClick={() => handleSourceChange('cached')}
-              title="Use cached database data"
-            >
-              Cached DB
-            </button>
-          </div>
-        </div>
-      </section>
-
       <section className="financial__grid">
         <article className="financial__card financial__card--risk">
           <div className="card__icon"></div>

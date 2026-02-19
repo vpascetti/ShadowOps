@@ -3,8 +3,8 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const schemaV1 = JSON.parse(fs.readFileSync(path.join(__dirname, '../docs/csv-schema-v1.json'), 'utf-8'))
-const aliasesV1 = JSON.parse(fs.readFileSync(path.join(__dirname, '../docs/csv-aliases-v1.json'), 'utf-8'))
+const schemaV1 = JSON.parse(fs.readFileSync(path.join(__dirname, '../../docs/csv-schema-v1.json'), 'utf-8'))
+const aliasesV1 = JSON.parse(fs.readFileSync(path.join(__dirname, '../../docs/csv-aliases-v1.json'), 'utf-8'))
 
 const REQUIRED = schemaV1.required || []
 const OPTIONAL = schemaV1.optional || []

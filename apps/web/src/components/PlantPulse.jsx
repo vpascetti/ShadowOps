@@ -23,7 +23,7 @@ export default function PlantPulse() {
     try {
       // Load jobs and realtime data in parallel
       const [jobsRes, realtimeRes] = await Promise.all([
-        fetch('/jobs'),
+        fetch('/demo/jobs'),
         fetch('/realtime/part-numbers')
       ]);
 

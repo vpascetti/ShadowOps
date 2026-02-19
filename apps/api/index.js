@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import multer from 'multer'
 import Papa from 'papaparse'
 import oracledb from 'oracledb'
+import fs from 'fs'
 import { isIQMSScheduleSummaryV1, importIQMSScheduleSummaryV1 } from './iqms_importer.js'
 import { normalizeCsvPayload, CSV_SCHEMA_VERSION } from './csv_contract.js'
 import { normalizeCsvRows, HEADER_ALIASES } from './shadowops_normalizer.js'
@@ -16,23 +17,24 @@ const port = parseInt(process.env.PORT || '5050', 10)
 
 // Oracle connection config
 const ORACLE_CONFIG = {
-  user: process.env.ORACLE_USER,
-  password: process.env.ORACLE_PASSWORD,
-  connectString: process.env.ORACLE_CONNECT_STRING || 
+  user: process.env.IQMS_USER || process.env.ORACLE_USER,
+  password: process.env.IQMS_PASSWORD || process.env.ORACLE_PASSWORD,
+  connectString: process.env.IQMS_CONNECT_STRING || process.env.ORACLE_CONNECT_STRING || 
+    (process.env.IQMS_HOST && `${process.env.IQMS_HOST}:${process.env.IQMS_PORT || 1521}/${process.env.IQMS_SERVICE || 'IQMS'}`) ||
     (process.env.ORACLE_HOST && `(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=${process.env.ORACLE_HOST})(PORT=${process.env.ORACLE_PORT || 1521}))(CONNECT_DATA=(SID=${process.env.ORACLE_SID})))`)
 }
 
 const IQMS_ENABLED = !!(ORACLE_CONFIG.user && ORACLE_CONFIG.password && ORACLE_CONFIG.connectString)
 
 // Helper to query IQMS directly
-async function queryIQMS(sql) {
+async function queryIQMS(sql, bindParams = {}) {
   if (!IQMS_ENABLED) {
     throw new Error('IQMS not configured. Set ORACLE_USER, ORACLE_PASSWORD, ORACLE_HOST, ORACLE_SID')
   }
   let connection
   try {
     connection = await oracledb.getConnection(ORACLE_CONFIG)
-    const result = await connection.execute(sql, [], { outFormat: oracledb.OUT_FORMAT_OBJECT })
+    const result = await connection.execute(sql, bindParams, { outFormat: oracledb.OUT_FORMAT_OBJECT })
     return result.rows || []
   } finally {
     if (connection) {
@@ -85,80 +87,240 @@ app.get('/api/jobs', requireTenant, async (req, res) => {
   res.json({ ok: true, jobs: result.rows })
 })
 
-// Demo mode: fetch jobs without authentication (uses demo tenant)
+// Fetch material exceptions for a specific job (from IQMS)
+app.get('/api/jobs/:jobId/materials', async (req, res) => {
+  try {
+    const { jobId } = req.params
+    
+    if (!IQMS_ENABLED) {
+      return res.status(503).json({ 
+        ok: false, 
+        error: 'IQMS not configured',
+        message: 'Material data unavailable - IQMS connection required'
+      })
+    }
+
+    // Load SQL query for material details
+    const sql = fs.readFileSync('./sql/iqms_job_materials_detail.sql', 'utf8')
+    
+    // Query IQMS with workorder_id parameter
+    const rows = await queryIQMS(sql, { workorder_id: jobId })
+    
+    // Transform to match frontend expectations
+    const materials = rows.map(row => ({
+      class: row.CLASS,
+      item_no: row.ITEMNO,
+      rev: row.REV,
+      description: row.DESCRIP,
+      description2: row.DESCRIP2,
+      eplant_id: row.EPLANT_ID,
+      prod_date: row.PROD_DATE,
+      arinvt_id: row.ARINVT_ID,
+      division_id: row.DIVISION_ID,
+      qty_required: parseFloat(row.QTY) || 0,
+      onhand: parseFloat(row.ONHAND) || 0,
+      shortage_qty: parseFloat(row.SHORTAGE_QTY) || 0,
+      standard_eplant_id: row.STANDARD_EPLANT_ID
+    }))
+    
+    res.json({ ok: true, materials, source: 'iqms', count: materials.length })
+  } catch (err) {
+    console.error(`Error fetching materials for job ${req.params.jobId}:`, err)
+    res.status(500).json({ 
+      ok: false, 
+      error: 'Failed to fetch materials',
+      message: err.message 
+    })
+  }
+})
+
+// Demo mode: fetch jobs (queries IQMS if available, otherwise cached DB)
 app.get('/api/demo/jobs', async (req, res) => {
-  const { tenantId } = await ensureDemoTenantAndToken()
-  const sql = `SELECT job_id, job, work_center, customer, part, start_date, due_date, qty_released, qty_completed, hours_to_go, parts_to_go, prod_start_time, prod_end_time, eplant_id, eplant_company, origin, firm, reason, root_cause, accountable, projected, timeline, status FROM jobs WHERE tenant_id = $1 ORDER BY due_date ASC NULLS LAST`
-  const result = await query(sql, [tenantId])
-  res.json({ ok: true, jobs: result.rows })
+  try {
+    let jobs = []
+    let dataSource = 'cached'
+    
+    // Try to query IQMS directly for real-time data with proper pricing
+    if (IQMS_ENABLED) {
+      try {
+        console.log('[/api/demo/jobs] Querying IQMS for jobs with pricing...')
+        const sql = fs.readFileSync('./sql/iqms_jobs_fast.sql', 'utf8')
+        const rows = await queryIQMS(sql)
+        
+        jobs = rows.map(row => ({
+          job_id: row.JOB_ID,
+          job: row.JOB_ID?.toString() || '',
+          work_center: row.WORK_CENTER,
+          customer: row.CUSTOMER,
+          part: row.PART,
+          start_date: row.PROD_START_TIME,
+          due_date: row.DUE_DATE,
+          qty_released: row.MFG_QUANTITY,
+          qty_completed: row.MFG_QUANTITY && row.PARTS_TO_GO 
+            ? Math.max(0, parseFloat(row.MFG_QUANTITY) - parseFloat(row.PARTS_TO_GO || 0))
+            : null,
+          hours_to_go: row.REMAINING_WORK,
+          parts_to_go: row.PARTS_TO_GO, 
+          prod_start_time: row.PROD_START_TIME,
+          prod_end_time: row.PROD_END_TIME,
+          eplant_id: null,
+          eplant_company: null,
+          origin: null,
+          firm: row.FIRM,
+          reason: null,
+          root_cause: null,
+          accountable: null,
+          projected: null,
+          timeline: null,
+          status: row.STATUS,
+          total_order_value: row.TOTAL_ORDER_VALUE,
+          unit_price: row.UNIT_PRICE,
+          material_exception: row.MATERIAL_EXCEPTION === 'Y' || row.MATERIAL_EXCEPTION === '1' || row.MATERIAL_EXCEPTION === 1
+        }))
+        
+        dataSource = 'iqms'
+        console.log(`[/api/demo/jobs] Retrieved ${jobs.length} jobs from IQMS`)
+      } catch (iqmsErr) {
+        console.warn('[/api/demo/jobs] IQMS query failed, falling back to cached DB:', iqmsErr.message)
+      }
+    }
+    
+    // Fallback to cached database if IQMS unavailable
+    if (jobs.length === 0) {
+      const { tenantId } = await ensureDemoTenantAndToken()
+      const sql = `
+        SELECT 
+          job_id, job, work_center, customer, part, 
+          start_date, due_date, qty_released, qty_completed, 
+          hours_to_go, parts_to_go, prod_start_time, prod_end_time, 
+          eplant_id, eplant_company, origin, firm, 
+          reason, root_cause, accountable, projected, timeline, status,
+          total_order_value, unit_price
+        FROM jobs 
+        WHERE tenant_id = $1 
+        ORDER BY due_date ASC NULLS LAST`
+      const result = await query(sql, [tenantId])
+      jobs = result.rows
+      dataSource = 'cached'
+    }
+    
+    res.json({ ok: true, jobs, source: dataSource })
+  } catch (err) {
+    console.error('[/api/demo/jobs] Error:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Realtime machine health data from IQMS
+app.get('/api/realtime/part-numbers', async (req, res) => {
+  try {
+    if (!IQMS_ENABLED) {
+      // NO SYNTHETIC FALLBACK - return error if IQMS unavailable
+      return res.status(503).json({ 
+        ok: false, 
+        error: 'IQMS not configured',
+        message: 'Real-time data unavailable - IQMS connection required'
+      })
+    }
+
+    // Load SQL query from file
+    const sql = fs.readFileSync('./sql/iqms_realtime_part_numbers.sql', 'utf8')
+    
+    // Query IQMS for realtime machine data
+    const rows = await queryIQMS(sql)
+    
+    // Transform to match expected structure
+    const data = rows.map(row => ({
+      work_center: row.WORK_CENTER,
+      work_center_desc: row.WORK_CENTER_DESC,
+      item_no: row.ITEM_NO,
+      description: row.DESCRIPTION,
+      mfg_no: row.MFG_NO,
+      parts_to_go: parseFloat(row.PARTS_TO_GO) || 0,
+      hours_left: parseFloat(row.HOURS_LEFT) || 0,
+      std_cycle: parseFloat(row.STD_CYCLE) || 0,
+      last_cycle: parseFloat(row.LAST_CYCLE) || 0,
+      avg_cycle: parseFloat(row.AVG_CYCLE) || 0,
+      act_cav: parseFloat(row.ACT_CAV) || 0,
+      std_cav: parseFloat(row.STD_CAV) || 0,
+      shift_up: parseFloat(row.SHIFT_UP) || 0,
+      shift_dwn: parseFloat(row.SHIFT_DWN) || 0,
+      down_code: row.DOWN_CODE,
+      down_descrip: row.DOWN_DESCRIP,
+      down_start_time: row.DOWN_START_TIME,
+      workorder_id: row.WORKORDER_ID,
+      cust_no: row.CUST_NO,
+      priority_level: row.PRIORITY_LEVEL,
+      has_qc_issues: row.HAS_QC_ISSUES === 'Y' || row.HAS_QC_ISSUES === '1',
+      qc_issue_count: parseInt(row.QC_ISSUE_COUNT) || 0,
+      run_qty: parseFloat(row.RUN_QTY) || 0,
+      op_desc: row.OP_DESC,
+      op_no: row.OP_NO,
+      start_time: row.START_TIME
+    }))
+
+    res.json({ ok: true, data, source: 'iqms', count: data.length })
+  } catch (err) {
+    console.error('Error fetching realtime machine data:', err)
+    // NO SYNTHETIC FALLBACK - return error on IQMS query failure
+    res.status(500).json({ 
+      ok: false, 
+      error: 'IQMS query failed',
+      message: err.message 
+    })
+  }
 })
 
 // Financial Summary endpoint (queries IQMS live data by default)
 app.get('/api/financial-summary', async (req, res) => {
   const { tenantId } = await ensureDemoTenantAndToken()
-  const { unitPrice = 100, stdHourlyRate = 75, source = 'auto' } = req.query
+  const { unitPrice = 100, stdHourlyRate = 75 } = req.query
   const uPrice = parseFloat(unitPrice)
   const hourRate = parseFloat(stdHourlyRate)
 
   try {
-    let jobs = []
-    let dataSource = 'cached'
-
-    // Try IQMS if available or explicitly requested
-    if ((source === 'auto' && IQMS_ENABLED) || source === 'iqms') {
-      try {
-        console.log('Querying IQMS directly for financial data...')
-        const iqmsJobs = await queryIQMS(`
-          SELECT 
-            w.WORKORDER_ID AS job_id,
-            w.JOB AS job,
-            w.WORK_CENTER AS work_center,
-            w.CYCLES_REQ AS qty_released,
-            GREATEST(0, LEAST(w.CYCLES_REQ, w.CYCLES_REQ - NVL(parts.parts_to_go, 0))) AS qty_completed,
-            vsh.HOURS_TO_GO AS hours_to_go,
-            w.MUST_SHIP_DATE AS ship_date,
-            COALESCE(w.MUST_SHIP_DATE, w.PROMISE_DATE, w.END_TIME) AS due_date,
-            CASE 
-              WHEN COALESCE(w.MUST_SHIP_DATE, w.PROMISE_DATE, w.END_TIME) < SYSDATE THEN 'closed'
-              ELSE 'open'
-            END AS status
-          FROM WORKORDER w
-            LEFT JOIN V_SCHED_HRS_TO_GO vsh ON vsh.WORKORDER_ID = w.WORKORDER_ID
-            LEFT JOIN V_SCHED_PARTS_TO_GO parts ON parts.WORKORDER_ID = w.WORKORDER_ID
-          WHERE ROWNUM <= 10000
-        `)
-        jobs = iqmsJobs.map(row => ({
-          job_id: row.JOB_ID,
-          qty_released: parseFloat(row.QTY_RELEASED) || 0,
-          qty_completed: parseFloat(row.QTY_COMPLETED) || 0,
-          hours_to_go: parseFloat(row.HOURS_TO_GO) || 0,
-          due_date: row.DUE_DATE,
-          status: row.STATUS
-        }))
-        dataSource = 'iqms'
-      } catch (iqmsErr) {
-        if (source === 'iqms') {
-          throw new Error(`IQMS query failed: ${iqmsErr.message}`)
-        }
-        console.warn('IQMS unavailable, falling back to cached DB:', iqmsErr.message)
-      }
+    if (!IQMS_ENABLED) {
+      return res.status(503).json({
+        ok: false,
+        error: 'IQMS not available',
+        message: 'Financial summary requires live IQMS data'
+      })
     }
 
-    // Fallback to cached database
-    if (source === 'cached' || (source === 'auto' && jobs.length === 0)) {
-      const result = await query(
-        `SELECT job_id, qty_released, qty_completed, hours_to_go, due_date, status FROM jobs WHERE tenant_id = $1`,
-        [tenantId]
-      )
-      jobs = result.rows.map(row => ({
-        job_id: row.job_id,
-        qty_released: parseFloat(row.qty_released) || 0,
-        qty_completed: parseFloat(row.qty_completed) || 0,
-        hours_to_go: parseFloat(row.hours_to_go) || 0,
-        due_date: row.due_date,
-        status: row.status
+    let jobs = []
+    let dataSource = 'iqms'
+
+    try {
+      console.log('Querying IQMS directly for financial data...')
+      const iqmsJobs = await queryIQMS(`
+        SELECT 
+          w.ID AS job_id,
+          w.JOB AS job,
+          w.WORK_CENTER AS work_center,
+          w.CYCLES_REQ AS qty_released,
+          GREATEST(0, LEAST(w.CYCLES_REQ, w.CYCLES_REQ - NVL(parts.parts_to_go, 0))) AS qty_completed,
+          vsh.HOURS_TO_GO AS hours_to_go,
+          w.MUST_SHIP_DATE AS ship_date,
+          COALESCE(w.MUST_SHIP_DATE, w.PROMISE_DATE, w.END_TIME) AS due_date,
+          CASE 
+            WHEN COALESCE(w.MUST_SHIP_DATE, w.PROMISE_DATE, w.END_TIME) < SYSDATE THEN 'closed'
+            ELSE 'open'
+          END AS status
+        FROM WORKORDER w
+          LEFT JOIN V_SCHED_HRS_TO_GO vsh ON vsh.WORKORDER_ID = w.ID
+          LEFT JOIN V_SCHED_PARTS_TO_GO parts ON parts.WORKORDER_ID = w.ID
+        WHERE ROWNUM <= 10000
+      `)
+      jobs = iqmsJobs.map(row => ({
+        job_id: row.JOB_ID,
+        qty_released: parseFloat(row.QTY_RELEASED) || 0,
+        qty_completed: parseFloat(row.QTY_COMPLETED) || 0,
+        hours_to_go: parseFloat(row.HOURS_TO_GO) || 0,
+        due_date: row.DUE_DATE,
+        status: row.STATUS
       }))
-      dataSource = 'cached'
+    } catch (iqmsErr) {
+      throw new Error(`IQMS query failed: ${iqmsErr.message}`)
     }
 
     // Calculate financial metrics from the job data

@@ -140,6 +140,9 @@ const buildJobFromRow = (row: Record<string, unknown>): Job | null => {
   const description = String(getRowValue(row, ['description', 'descrip']) || '')
   const customer = String(getRowValue(row, ['customer', 'custno']) || '')
   const workCenter = String(getRowValue(row, ['work_center', 'eqno']) || '')
+  const plantId = String(getRowValue(row, ['plant_id', 'eplant_id']) || '')
+  const plantName = String(getRowValue(row, ['eplant_company', 'plant_name', 'eplant_name']) || '')
+  const plantLabel = plantName || (plantId ? `Plant ${plantId}` : '')
   const priority = String(getRowValue(row, ['priority']) || '')
   const priorityLevel = toNumber(getRowValue(row, ['priority_level']), 0)
   const priorityNote = String(getRowValue(row, ['priority_note']) || '')
@@ -295,6 +298,11 @@ const buildJobFromRow = (row: Record<string, unknown>): Job | null => {
     ...(unitPrice !== null && { unit_price: unitPrice }),
     ...(totalOrderValue !== null && { total_order_value: totalOrderValue }),
     
+    // Plant identity
+    ...(plantId && { plant_id: plantId, eplant_id: plantId }),
+    ...(plantName && { eplant_company: plantName, plant_name: plantName }),
+    ...(plantLabel && { Plant: plantLabel }),
+
     // Additional metadata
     ...(description && { description }),
     ...(priorityNote && { priority_note: priorityNote }),
@@ -441,7 +449,8 @@ interface CacheEntry<T> {
 }
 
 const jobsCache: CacheEntry<Job[]> | null = null
-const CACHE_TTL_MS = parseInt(process.env.IQMS_CACHE_TTL_SECONDS || '60', 10) * 1000 // Default 60 seconds
+const CACHE_TTL_MS = parseInt(process.env.IQMS_CACHE_TTL_SECONDS || '0', 10) * 1000 // Default: no cache
+const USE_CACHE = CACHE_TTL_MS > 0
 
 const isCacheValid = <T,>(cache: CacheEntry<T> | null): cache is CacheEntry<T> => {
   if (!cache) return false
@@ -452,8 +461,8 @@ export class IQMSOracleProvider implements DataProvider {
   private jobsCache: CacheEntry<Job[]> | null = null
 
   async getJobs(query?: JobQuery): Promise<Job[]> {
-    // Check cache first
-    if (isCacheValid(this.jobsCache)) {
+    // Check cache first (only if enabled)
+    if (USE_CACHE && isCacheValid(this.jobsCache)) {
       console.log('[Cache] Serving jobs from cache')
       return applyJobFilters(this.jobsCache.data, query).sort((a, b) => b.risk_score - a.risk_score)
     }
@@ -464,9 +473,11 @@ export class IQMSOracleProvider implements DataProvider {
     const rows = await execute(sql)
     const jobs = rows.map(buildJobFromRow).filter((job): job is Job => Boolean(job))
     
-    // Update cache
-    this.jobsCache = { data: jobs, timestamp: Date.now() }
-    console.log(`[Cache] Cached ${jobs.length} jobs`)
+    // Update cache if enabled
+    if (USE_CACHE) {
+      this.jobsCache = { data: jobs, timestamp: Date.now() }
+      console.log(`[Cache] Cached ${jobs.length} jobs`)
+    }
     
     return applyJobFilters(jobs, query).sort((a, b) => b.risk_score - a.risk_score)
   }

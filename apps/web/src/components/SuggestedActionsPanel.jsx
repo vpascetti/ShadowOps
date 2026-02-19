@@ -1,5 +1,6 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { getAllSuggestedActions, scoreActionUrgency } from '../utils/actionRecommendations';
+import { calculateProgress, calculateScheduleRatio, determineStatus } from '../utils/metricsCalculations';
 import '../styles/SuggestedActionsPanel.css';
 
 /**
@@ -13,7 +14,89 @@ import '../styles/SuggestedActionsPanel.css';
  * - When (urgency window)
  */
 export default function SuggestedActionsPanel({ jobs = [] }) {
-  if (!jobs || jobs.length === 0) {
+  const [fallbackJobs, setFallbackJobs] = useState([]);
+  const [fallbackLoading, setFallbackLoading] = useState(false);
+  const [fallbackError, setFallbackError] = useState(null);
+
+  useEffect(() => {
+    if (jobs && jobs.length > 0) return;
+    if (fallbackLoading) return;
+
+    const loadFallbackJobs = async () => {
+      setFallbackLoading(true);
+      setFallbackError(null);
+      try {
+        const res = await fetch('/demo/jobs');
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'API error');
+        }
+        const payload = await res.json();
+        const rawJobs = Array.isArray(payload.jobs)
+          ? payload.jobs
+          : Array.isArray(payload)
+            ? payload
+            : [];
+
+        const normalized = rawJobs.map((job, index) => {
+          const dueDate = job.DueDate || job.due_date || '';
+          const startDate = job.StartDate || job.start_date || '';
+          const qtyReleased = job.QtyReleased || job.qty_released || 0;
+          const qtyCompleted = job.QtyCompleted || job.qty_completed || 0;
+          const progress = calculateProgress(qtyReleased, qtyCompleted);
+          const scheduleRatio = calculateScheduleRatio(startDate, dueDate, new Date());
+          const status =
+            job.status === 'Late' || job.status === 'At Risk' || job.status === 'On Track'
+              ? job.status
+              : determineStatus(dueDate, progress, scheduleRatio, new Date());
+
+          return {
+            ...job,
+            Job: job.Job || job.job_id || job.job || `JOB-${index}`,
+            DueDate: dueDate,
+            StartDate: startDate,
+            QtyReleased: qtyReleased,
+            QtyCompleted: qtyCompleted,
+            status,
+            progress,
+            scheduleRatio,
+            risk_score: job.risk_score || 0,
+            material_exception: job.material_exception || false,
+            material_shortage: job.material_shortage || false,
+            MaterialShortQty: job.MaterialShortQty || job.material_short_qty || 0
+          };
+        });
+
+        setFallbackJobs(normalized);
+      } catch (err) {
+        setFallbackError(err.message);
+      } finally {
+        setFallbackLoading(false);
+      }
+    };
+
+    loadFallbackJobs();
+  }, [jobs, fallbackLoading]);
+
+  const jobsToUse = jobs && jobs.length > 0 ? jobs : fallbackJobs;
+
+  if (!jobsToUse || jobsToUse.length === 0) {
+    if (fallbackLoading) {
+      return (
+        <section className="suggested-actions-panel">
+          <h2>Suggested Actions</h2>
+          <p className="empty-state">Loading suggested actions...</p>
+        </section>
+      );
+    }
+    if (fallbackError) {
+      return (
+        <section className="suggested-actions-panel">
+          <h2>Suggested Actions</h2>
+          <p className="empty-state">Unable to load jobs: {fallbackError}</p>
+        </section>
+      );
+    }
     return (
       <section className="suggested-actions-panel">
         <h2>Suggested Actions</h2>
@@ -22,7 +105,7 @@ export default function SuggestedActionsPanel({ jobs = [] }) {
     );
   }
 
-  const actions = getAllSuggestedActions(jobs);
+  const actions = getAllSuggestedActions(jobsToUse);
   
   if (actions.length === 0) {
     return (
@@ -117,22 +200,12 @@ export default function SuggestedActionsPanel({ jobs = [] }) {
                   </div>
                 </div>
 
-                <button 
-                  className={`action-button button-${action.severity}`}
-                >
-                  Take Action →
-                </button>
               </div>
             </div>
           );
         })}
       </div>
 
-      {actions.length > 10 && (
-        <div className="actions-footer">
-          <p>Showing 10 of {actions.length} recommended actions. View all →</p>
-        </div>
-      )}
     </section>
   );
 }

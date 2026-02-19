@@ -7,7 +7,7 @@ export default function AlertsPanel({ alerts }) {
 
   return (
     <div className="alerts-panel">
-      <h3 className="alerts-title">ShadowOps Alerts</h3>
+      <h3 className="alerts-title">Critical Issues</h3>
       <div className="alerts-list">
         {alerts.map((alert) => (
           <div key={alert.id} className={`alert-item alert-${alert.severity}`}>

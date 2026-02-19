@@ -35,12 +35,18 @@ export type SuggestedAction = {
  */
 export function generateActionsForJob(job: any, jobIndex: number): SuggestedAction[] {
   const actions: SuggestedAction[] = [];
+  const jobId = job.Job || job.job_id || `JOB-${jobIndex}`;
+  const riskScore = Number(job.risk_score || 0);
+  const hasMaterialException =
+    job.material_exception === true ||
+    job.material_shortage === true ||
+    Number(job.MaterialShortQty || job.material_short_qty || 0) > 0;
 
   // === MATERIAL-RELATED ACTIONS ===
-  if (job.materialStatus === 'Short' || job.materialAvailable === false) {
+  if (job.materialStatus === 'Short' || job.materialAvailable === false || hasMaterialException) {
     actions.push({
-      action_id: `${job.Job}-MAT-${jobIndex}`,
-      job_id: job.Job,
+      action_id: `${jobId}-MAT-${jobIndex}`,
+      job_id: jobId,
       title: 'Expedite Material Delivery',
       description: `Material shortage detected. Contact supplier to expedite delivery or consider substitutes.`,
       severity: job.status === 'Late' ? 'critical' : 'high',
@@ -58,8 +64,8 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
   if (job.workCenterLoad && job.workCenterLoad > 100) {
     const overloadPct = Math.round(job.workCenterLoad - 100);
     actions.push({
-      action_id: `${job.Job}-CAP-${jobIndex}`,
-      job_id: job.Job,
+      action_id: `${jobId}-CAP-${jobIndex}`,
+      job_id: jobId,
       title: 'Rebalance Work Center Load',
       description: `${job.WorkCenter} is ${overloadPct}% overbooked. Consider parallel processing or shifting work to alternative centers.`,
       severity: job.status === 'Late' ? 'critical' : 'high',
@@ -75,8 +81,8 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
   // === SEQUENCING/DEPENDENCY ACTIONS ===
   if (job.upstreamJobLate === true) {
     actions.push({
-      action_id: `${job.Job}-SEQ-${jobIndex}`,
-      job_id: job.Job,
+      action_id: `${jobId}-SEQ-${jobIndex}`,
+      job_id: jobId,
       title: 'Expedite Prerequisite Job',
       description: `This job is blocked by an upstream job that's running late. Prioritize the dependency job first.`,
       severity: 'high',
@@ -92,8 +98,8 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
   // === QUALITY-RELATED ACTIONS ===
   if (job.qualityHold === true) {
     actions.push({
-      action_id: `${job.Job}-QA-${jobIndex}`,
-      job_id: job.Job,
+      action_id: `${jobId}-QA-${jobIndex}`,
+      job_id: jobId,
       title: 'Resolve Quality Hold',
       description: `Job is on quality hold. Investigate root cause and clear hold to resume production.`,
       severity: 'critical',
@@ -109,8 +115,8 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
   // === EQUIPMENT/DOWNTIME ACTIONS ===
   if (job.machineDowntime === true) {
     actions.push({
-      action_id: `${job.Job}-MTN-${jobIndex}`,
-      job_id: job.Job,
+      action_id: `${jobId}-MTN-${jobIndex}`,
+      job_id: jobId,
       title: 'Repair Equipment or Route Elsewhere',
       description: `${job.WorkCenter} is down or running slow. Schedule maintenance or route this job to an alternative work center.`,
       severity: 'critical',
@@ -126,8 +132,8 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
   // === LATE JOB ACTIONS ===
   if (job.status === 'Late') {
     actions.push({
-      action_id: `${job.Job}-LATE-${jobIndex}`,
-      job_id: job.Job,
+      action_id: `${jobId}-LATE-${jobIndex}`,
+      job_id: jobId,
       title: 'Customer Notification Required',
       description: `Job is past due date. Notify customer of actual completion date and any impact to their order.`,
       severity: 'high',
@@ -143,8 +149,8 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
   // === SCHEDULE PRESSURE ACTIONS ===
   if (job.projectedStatus === 'Projected Late' && job.status !== 'Late') {
     actions.push({
-      action_id: `${job.Job}-PROJ-${jobIndex}`,
-      job_id: job.Job,
+      action_id: `${jobId}-PROJ-${jobIndex}`,
+      job_id: jobId,
       title: 'Adjust Schedule or Add Resources',
       description: `Current pace projects late completion. Either reschedule the due date or add additional capacity.`,
       severity: job.daysAtRisk && job.daysAtRisk > 1 ? 'high' : 'medium',
@@ -153,6 +159,38 @@ export function generateActionsForJob(job: any, jobIndex: number): SuggestedActi
       },
       owner: 'Planning',
       effort_hours: 2,
+      due_in_hours: 24,
+    });
+  }
+
+  if (job.status === 'At Risk') {
+    actions.push({
+      action_id: `${jobId}-RISK-${jobIndex}`,
+      job_id: jobId,
+      title: 'Recover Schedule Slip',
+      description: `Job is behind schedule. Review capacity, sequence, and material availability to recover progress.`,
+      severity: 'high',
+      impact: {
+        hours_at_risk: job.hoursAtRisk || 6,
+      },
+      owner: 'Planning',
+      effort_hours: 2,
+      due_in_hours: 12,
+    });
+  }
+
+  if (riskScore >= 70 && job.status !== 'Late' && job.status !== 'At Risk') {
+    actions.push({
+      action_id: `${jobId}-RISK-${jobIndex}`,
+      job_id: jobId,
+      title: 'Mitigate High Risk Score',
+      description: `Risk score is ${Math.round(riskScore)}. Confirm materials, staffing, and schedule buffers to prevent slippage.`,
+      severity: 'medium',
+      impact: {
+        hours_at_risk: job.hoursAtRisk || 4,
+      },
+      owner: 'Planning',
+      effort_hours: 1,
       due_in_hours: 24,
     });
   }

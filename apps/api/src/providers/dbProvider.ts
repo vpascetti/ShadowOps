@@ -57,6 +57,10 @@ const toJob = (row: Record<string, unknown>): Job | null => {
   const jobId = String(row.job_id ?? row.job ?? '')
   if (!jobId) return null
 
+  const plantId = row.eplant_id ? String(row.eplant_id) : ''
+  const plantName = row.eplant_company ? String(row.eplant_company) : ''
+  const plantLabel = plantName || (plantId ? `Plant ${plantId}` : '')
+
   const baseJob: Job = {
     job_id: jobId,
     due_date: toDateString(dueDate) || '',
@@ -73,7 +77,10 @@ const toJob = (row: Record<string, unknown>): Job | null => {
   return {
     ...baseJob,
     risk_score: riskScore,
-    risk_reason: riskReason
+    risk_reason: riskReason,
+    ...(plantId && { plant_id: plantId, eplant_id: plantId }),
+    ...(plantName && { eplant_company: plantName, plant_name: plantName }),
+    ...(plantLabel && { Plant: plantLabel })
   }
 }
 
@@ -105,7 +112,7 @@ export class DbProvider implements DataProvider {
     }
 
     const sql = `
-      SELECT job_id, job, due_date, status, qty_released, qty_completed, hours_to_go, work_center
+      SELECT job_id, job, due_date, status, qty_released, qty_completed, hours_to_go, work_center, eplant_id, eplant_company
       FROM jobs
       WHERE ${where.join(' AND ')}
       ORDER BY due_date ASC NULLS LAST
@@ -122,7 +129,7 @@ export class DbProvider implements DataProvider {
   async getJobById(jobId: string): Promise<JobDetail | null> {
     const { tenantId } = await ensureDemoTenantAndToken()
     const sql = `
-      SELECT job_id, job, due_date, status, qty_released, qty_completed, hours_to_go, work_center
+      SELECT job_id, job, due_date, status, qty_released, qty_completed, hours_to_go, work_center, eplant_id, eplant_company
       FROM jobs
       WHERE tenant_id = $1 AND (job_id::text = $2 OR job = $2)
       LIMIT 1

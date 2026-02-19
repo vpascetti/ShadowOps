@@ -22,7 +22,7 @@
 
 .run-list-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 1rem;
 }
 
@@ -63,33 +63,45 @@
 .run-list-jobs {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .run-list-job-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 0.5fr;
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
-  align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
   font-size: 0.85rem;
+  transition: all 0.2s ease;
 }
 
-.run-list-job-row:last-child {
-  border-bottom: none;
+.run-list-job-row:hover {
+  border-color: #2563eb;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.1);
+}
+
+.run-list-job-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
 }
 
 .run-list-job-info {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  flex: 1;
 }
 
 .run-list-job-id {
   font-weight: 600;
   color: #1f2937;
   font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.9rem;
 }
 
 .run-list-job-customer {
@@ -97,57 +109,130 @@
   color: #666;
 }
 
-.run-list-due-date {
-  font-family: 'Monaco', 'Courier New', monospace;
-  color: #666;
-  font-size: 0.8rem;
-}
-
-.run-list-job-status {
-  display: flex;
-  justify-content: center;
-}
-
-.run-list-status-badge {
-  font-size: 0.75rem;
-  font-weight: 600;
+.run-list-revenue {
+  font-weight: 700;
+  color: #16a34a;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  background: rgba(22, 163, 74, 0.1);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
-  white-space: nowrap;
 }
 
-.run-list-status-badge.status-late {
+.run-list-revenue.revenue-late {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.12);
+}
+
+.run-list-revenue.revenue-at-risk {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.run-list-revenue.revenue-on-track {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.run-list-job-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.run-list-metric {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1f2937;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.metric-value.overdue {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.metric-value.urgent {
+  color: #f97316;
+  font-weight: 700;
+}
+
+.metric-value.behind {
+  color: #f97316;
+}
+
+.metric-warning {
+  font-size: 0.75rem;
+  color: #f97316;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.run-list-blockers {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.blockers-label {
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.blocker-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.blocker-badge.blocker-material {
   background: rgba(220, 38, 38, 0.15);
   color: #dc2626;
 }
 
-.run-list-status-badge.status-on-track {
-  background: rgba(22, 163, 74, 0.15);
-  color: #16a34a;
-}
-
-.run-list-status-badge.status-at-risk {
+.blocker-badge.blocker-capacity {
   background: rgba(249, 115, 22, 0.15);
   color: #f97316;
 }
 
-.run-list-priority-score {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.1rem;
+.blocker-badge.blocker-labor {
+  background: rgba(31, 59, 122, 0.15);
+  color: #1f3b7a;
 }
 
-.priority-label {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  color: #666;
-  font-weight: 500;
-  letter-spacing: 0.3px;
-}
+@media (max-width: 768px) {
+  .run-list-panel {
+    margin: 1rem 0;
+    padding: 1rem;
+  }
 
-.priority-value {
+  .run-list-grid {
+    grid-template-columns: 1fr;
+  }
+}
   font-weight: 700;
   color: #2563eb;
   font-size: 1.1rem;

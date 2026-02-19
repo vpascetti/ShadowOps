@@ -48,44 +48,9 @@ export interface MachineTendency {
 }
 
 /**
- * Generate synthetic historical performance data for testing
+ * REMOVED: generateHistoricalPerformance - NO SYNTHETIC DATA ALLOWED
+ * All data must come from IQMS realtime endpoints
  */
-export function generateHistoricalPerformance(
-  resourceId: string,
-  days: number = 30
-): HistoricalPerformance[] {
-  const history: HistoricalPerformance[] = [];
-  const now = Date.now();
-
-  for (let i = days; i >= 0; i--) {
-    const daysAgo = i;
-    const timestamp = new Date(now - daysAgo * 24 * 60 * 60 * 1000).toISOString();
-
-    // Simulate degradation for certain machines
-    let degradationFactor = 1.0;
-    if (resourceId === 'WC-10') {
-      // WC-10: degrading (getting slower over time)
-      degradationFactor = 1.0 + (i / days) * 0.3; // 30% slower by end
-    } else if (resourceId === 'WC-20') {
-      // WC-20: stable, healthy
-      degradationFactor = 1.0 + Math.random() * 0.05;
-    } else if (resourceId === 'WC-30') {
-      // WC-30: error spikes, unreliable
-      degradationFactor = 1.0 + Math.random() * 0.1;
-    }
-
-    history.push({
-      timestamp,
-      cycle_time_minutes: 45 * degradationFactor + Math.random() * 10,
-      output_units: 100 * (1 - Math.random() * 0.2),
-      error_rate: (resourceId === 'WC-30' ? 0.08 : 0.02) + Math.random() * 0.03,
-      downtime_minutes: resourceId === 'WC-30' ? 60 + Math.random() * 120 : 15 + Math.random() * 30,
-      utilization_percent: 75 + Math.random() * 20,
-    });
-  }
-
-  return history;
-}
 
 /**
  * Analyze machine tendency from historical data
@@ -284,56 +249,30 @@ const analyzeRealtimeMachines = (realtime: RealtimePartNumber[]): MachineTendenc
 }
 
 export function analyzeMachines(jobs: any[], realtime: RealtimePartNumber[] = []): MachineTendency[] {
-  if (realtime.length > 0) {
-    // Filter realtime data to only include work centers with scheduled jobs
-    const scheduledWorkCenters = new Set<string>();
-    jobs.forEach((job) => {
-      if (job.WorkCenter || job.work_center) {
-        scheduledWorkCenters.add(job.WorkCenter || job.work_center);
-      }
-    });
-
-    // Only analyze machines that have scheduled jobs
-    const filteredRealtime = realtime.filter(
-      (row) => row.work_center && scheduledWorkCenters.has(row.work_center)
-    );
-
-    return analyzeRealtimeMachines(filteredRealtime).sort((a, b) => {
-      const healthOrder = { critical: 0, warning: 1, healthy: 2, unknown: 3 }
-      const healthDiff = healthOrder[a.current_health] - healthOrder[b.current_health]
-      if (healthDiff !== 0) return healthDiff
-      const trendOrder = { critical: 0, degrading: 1, stable: 2, improving: 3 }
-      return trendOrder[a.trend] - trendOrder[b.trend]
-    })
+  // ONLY use real IQMS realtime data - NO SYNTHETIC FALLBACKS
+  if (realtime.length === 0) {
+    console.warn('[analyzeMachines] No realtime data available - returning empty array');
+    return [];
   }
 
-  const workCenters = new Set<string>();
-  const machineNames: Record<string, string> = {
-    'WC-10': 'Assembly Line A',
-    'WC-20': 'Precision Lathe',
-    'WC-30': 'Welding Station',
-  };
-
-  // Extract unique work centers
+  // Filter realtime data to only include work centers with scheduled jobs
+  const scheduledWorkCenters = new Set<string>();
   jobs.forEach((job) => {
-    if (job.WorkCenter) {
-      workCenters.add(job.WorkCenter);
+    if (job.WorkCenter || job.work_center) {
+      scheduledWorkCenters.add(job.WorkCenter || job.work_center);
     }
   });
 
-  // Analyze each machine
-  return Array.from(workCenters)
-    .map((wc) => {
-      const history = generateHistoricalPerformance(wc, 30);
-      return analyzeMachineTendency(wc, machineNames[wc] || wc, history);
-    })
-    .sort((a, b) => {
-      // Sort by health (critical first) then by trend
-      const healthOrder = { critical: 0, warning: 1, healthy: 2, unknown: 3 };
-      const healthDiff = healthOrder[a.current_health] - healthOrder[b.current_health];
-      if (healthDiff !== 0) return healthDiff;
+  // Only analyze machines that have scheduled jobs
+  const filteredRealtime = realtime.filter(
+    (row) => row.work_center && scheduledWorkCenters.has(row.work_center)
+  );
 
-      const trendOrder = { critical: 0, degrading: 1, stable: 2, improving: 3 };
-      return trendOrder[a.trend] - trendOrder[b.trend];
-    });
+  return analyzeRealtimeMachines(filteredRealtime).sort((a, b) => {
+    const healthOrder = { critical: 0, warning: 1, healthy: 2, unknown: 3 }
+    const healthDiff = healthOrder[a.current_health] - healthOrder[b.current_health]
+    if (healthDiff !== 0) return healthDiff
+    const trendOrder = { critical: 0, degrading: 1, stable: 2, improving: 3 }
+    return trendOrder[a.trend] - trendOrder[b.trend]
+  })
 }

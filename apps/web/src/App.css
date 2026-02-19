@@ -423,6 +423,15 @@ tbody tr:hover {
   width: 100%;
 }
 
+.metric-card.clickable {
+  cursor: pointer;
+}
+
+.metric-card.clickable:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .metric-card:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
@@ -1154,13 +1163,13 @@ body {
 .metric-label { font-size: 13px; font-weight: 600; color: var(--muted); }
 .metric-value { font-size: 28px; font-weight: 700; color: var(--text); }
 .metric-neutral { background: var(--surface-2); border-color: var(--border); }
-.metric-green { background: #ecfdf5; border-color: #a7f3d0; }
+.metric-green { background: var(--success-soft); border-color: rgba(22, 163, 74, 0.28); }
 .metric-green .metric-label, .pill-green { color: var(--success); }
 .metric-green .metric-value { color: var(--success); }
-.metric-orange { background: #fffbeb; border-color: #fde68a; }
+.metric-orange { background: var(--warning-soft); border-color: rgba(245, 158, 11, 0.28); }
 .metric-orange .metric-label, .pill-orange { color: var(--warning); }
 .metric-orange .metric-value { color: var(--warning); }
-.metric-red { background: #fef2f2; border-color: #fecaca; }
+.metric-red { background: var(--danger-soft); border-color: rgba(220, 38, 38, 0.28); }
 .metric-red .metric-label, .pill-red { color: var(--danger); }
 .metric-red .metric-value { color: var(--danger); }
 
@@ -1326,6 +1335,67 @@ body {
   color: #111827;
 }
 
+.risk-meta .pill.subtle {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.risk-meta .pill.subtle.cause-material {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.risk-meta .pill.subtle.cause-labor {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.risk-meta .pill.subtle.cause-capacity {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.risk-meta .pill.subtle.cause-quality {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.risk-meta .pill.subtle.cause-schedule {
+  background: var(--brand-2-soft);
+  color: var(--brand-2);
+}
+
+.risk-meta .pill.subtle.cause-other,
+.risk-meta .pill.subtle.cause-unspecified {
+  background: var(--muted-soft);
+  color: var(--muted);
+}
+
+.risk-meta .pill.status-pill {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.risk-meta .pill.status-pill.status-late {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.risk-meta .pill.status-pill.status-at-risk {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.risk-meta .pill.status-pill.status-projected-late {
+  background: var(--brand-2-soft);
+  color: var(--brand-2);
+}
+
+.risk-meta .pill.status-pill.status-on-track {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
 .driver-list,
 .action-list {
   margin: 0;
@@ -1336,6 +1406,36 @@ body {
 
 .action-list li {
   margin-bottom: 0.35rem;
+}
+
+.action-buckets {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 900px) {
+  .action-buckets {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.action-bucket {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #f8fafc;
+}
+
+.action-bucket-title {
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.action-impact {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-left: 0.35rem;
 }
 
 .briefing-empty {

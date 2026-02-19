@@ -43,7 +43,7 @@ const buildQuery = (params: Record<string, string>) => {
 }
 
 export default function App() {
-  const [view, setView] = useState<'phase1' | 'legacy' | 'financial' | 'plant-pulse' | 'briefing' | 'dashboard'>('briefing')
+  const [view, setView] = useState<'phase1' | 'legacy' | 'financial' | 'plant-pulse' | 'briefing' | 'dashboard' | 'actions'>('briefing')
   const [jobs, setJobs] = useState<Job[]>([])
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null)
   const [selectedJob, setSelectedJob] = useState<JobDetail | null>(null)
@@ -127,13 +127,13 @@ export default function App() {
     }
   }
 
-  if (view === 'briefing' || view === 'dashboard' || view === 'legacy') {
+  if (view === 'briefing' || view === 'dashboard' || view === 'actions' || view === 'legacy') {
     return (
       <>
         <UnifiedHeader currentView={view} onViewChange={handleViewChange} />
         <LegacyDashboard 
           onExit={() => setView('phase1')} 
-          currentView={view === 'briefing' ? 'briefing' : 'dashboard'}
+          currentView={view === 'briefing' || view === 'dashboard' || view === 'actions' ? view : 'dashboard'}
           onViewChange={(mode: string) => setView(mode as any)}
         />
       </>

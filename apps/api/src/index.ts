@@ -32,15 +32,18 @@ app.use((_req, res, next) => {
   next()
 })
 
-app.get('/health', (_req, res) => {
+const handleHealth = (_req, res) => {
   res.json({
     ok: true,
     version: 'v1',
     provider: process.env.DATA_PROVIDER || 'stub'
   })
-})
+}
 
-app.get('/jobs', async (req, res) => {
+app.get('/health', handleHealth)
+app.get('/api/health', handleHealth)
+
+const handleJobsRequest = async (req, res) => {
   try {
     const jobs = await provider.getJobs({
       status: req.query.status ? String(req.query.status) : undefined,
@@ -53,9 +56,14 @@ app.get('/jobs', async (req, res) => {
   } catch (error) {
     res.status(500).json({ ok: false, error: (error as Error).message })
   }
-})
+}
 
-app.get('/jobs/:id', async (req, res) => {
+app.get('/jobs', handleJobsRequest)
+app.get('/api/jobs', handleJobsRequest)
+app.get('/demo/jobs', handleJobsRequest)
+app.get('/api/demo/jobs', handleJobsRequest)
+
+const handleJobDetail = async (req, res) => {
   try {
     const detail = await provider.getJobById(req.params.id)
     if (!detail) {
@@ -65,18 +73,24 @@ app.get('/jobs/:id', async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, error: (error as Error).message })
   }
-})
+}
 
-app.get('/metrics/summary', async (_req, res) => {
+app.get('/jobs/:id', handleJobDetail)
+app.get('/api/jobs/:id', handleJobDetail)
+
+const handleMetricsSummary = async (_req, res) => {
   try {
     const metrics = await provider.getMetricsSummary()
     res.json({ ok: true, metrics })
   } catch (error) {
     res.status(500).json({ ok: false, error: (error as Error).message })
   }
-})
+}
 
-app.get('/financial-summary', async (req, res) => {
+app.get('/metrics/summary', handleMetricsSummary)
+app.get('/api/metrics/summary', handleMetricsSummary)
+
+const handleFinancialSummary = async (req, res) => {
   try {
     // Set a 10-second timeout for the query
     const timeoutPromise = new Promise<never>((_resolve, reject) => {
@@ -180,9 +194,12 @@ app.get('/financial-summary', async (req, res) => {
   } catch (error) {
     res.status(500).json({ ok: false, error: (error as Error).message })
   }
-})
+}
 
-app.get('/realtime/part-numbers', async (_req, res) => {
+app.get('/financial-summary', handleFinancialSummary)
+app.get('/api/financial-summary', handleFinancialSummary)
+
+const handleRealtime = async (_req, res) => {
   try {
     const realtime = (provider as { getRealtimePartNumbers?: () => Promise<RealtimePartNumber[]> })
       .getRealtimePartNumbers
@@ -194,9 +211,12 @@ app.get('/realtime/part-numbers', async (_req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, error: (error as Error).message })
   }
-})
+}
 
-app.get('/jobs/:id/materials', async (req, res) => {
+app.get('/realtime/part-numbers', handleRealtime)
+app.get('/api/realtime/part-numbers', handleRealtime)
+
+const handleJobMaterials = async (req, res) => {
   try {
     const getMaterials = (provider as { getJobMaterialsDetail?: (jobId: string) => Promise<JobMaterialDetail[]> })
       .getJobMaterialsDetail
@@ -208,7 +228,10 @@ app.get('/jobs/:id/materials', async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, error: (error as Error).message })
   }
-})
+}
+
+app.get('/jobs/:id/materials', handleJobMaterials)
+app.get('/api/jobs/:id/materials', handleJobMaterials)
 
 const start = async () => {
   await initDB()

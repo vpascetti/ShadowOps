@@ -12,69 +12,23 @@ import SuggestedActionsPanel from './components/SuggestedActionsPanel'
 import MachineHealthPanel from './components/MachineHealthPanel'
 import ExecutiveBriefing from './components/ExecutiveBriefing'
 import DashboardView from './components/DashboardView'
+// CENTRALIZED METRICS - ALL calculations must go through these functions
+import {
+  parseDate,
+  calculateProgress,
+  calculateScheduleRatio,
+  determineStatus,
+  getJobOrderValue,
+  calculateMetrics,
+  getJobPlant,
+  derivePlantSummary,
+  deriveWorkCenterSummary,
+  logMetricsCalculation
+} from './utils/metricsCalculations'
 
 // ============================================================================
-// HELPER FUNCTIONS
+// HELPER FUNCTIONS - All metric calculations are now in utils/metricsCalculations.ts
 // ============================================================================
-
-function parseDate(dateStr) {
-  if (!dateStr) return new Date(NaN)
-  if (dateStr.includes('-')) {
-    const parts = dateStr.split('T')[0].split('-')
-    if (parts.length === 3) {
-      const [year, month, day] = parts
-      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0)
-    }
-  }
-  const d = new Date(dateStr)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
-function calculateProgress(qtyReleased, qtyCompleted) {
-  const released = parseFloat(qtyReleased)
-  const completed = parseFloat(qtyCompleted)
-  if (!released || released === 0 || isNaN(completed)) {
-    return null
-  }
-  return Math.min(completed / released, 1)
-}
-
-function calculateScheduleRatio(startDateStr, dueDateStr, asOfDate = new Date()) {
-  try {
-    const startDate = parseDate(startDateStr)
-    const dueDate = parseDate(dueDateStr)
-    if (isNaN(startDate.getTime()) || isNaN(dueDate.getTime())) {
-      return null
-    }
-    const totalDuration = dueDate.getTime() - startDate.getTime()
-    const elapsed = asOfDate.getTime() - startDate.getTime()
-    if (totalDuration <= 0) {
-      return null
-    }
-    return elapsed / totalDuration
-  } catch (_e) {
-    return null
-  }
-}
-
-function determineStatus(dueDateStr, progress, scheduleRatio, asOfDate = new Date()) {
-  try {
-    const dueDateTrimmed = (dueDateStr || '').trim()
-    const asOfDateStr = `${asOfDate.getFullYear()}-${String(asOfDate.getMonth() + 1).padStart(2, '0')}-${String(asOfDate.getDate()).padStart(2, '0')}`
-    if (asOfDateStr > dueDateTrimmed) {
-      return 'Late'
-    }
-    if (progress !== null && scheduleRatio !== null) {
-      if (scheduleRatio - progress > 0.25) {
-        return 'At Risk'
-      }
-    }
-    return 'On Track'
-  } catch (_e) {
-    return 'On Track'
-  }
-}
 
 function calculateProjectedCompletionDate(
   startDateStr,
@@ -329,15 +283,6 @@ function enrichJob(row, asOfDate = new Date()) {
   }
 }
 
-function calculateMetrics(jobs) {
-  const total = jobs.length
-  const late = jobs.filter((j) => j.status === 'Late').length
-  const atRisk = jobs.filter((j) => j.status === 'At Risk').length
-  const onTrack = jobs.filter((j) => j.status === 'On Track').length
-
-  return { total, late, atRisk, onTrack }
-}
-
 // ============================================================================
 // MAIN APP
 // ============================================================================
@@ -352,6 +297,7 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
   const [sortOrder, setSortOrder] = useState('asc')
   const [statusFilter, setStatusFilter] = useState('All')
   const [workCenterFilter, setWorkCenterFilter] = useState('All')
+  const [plantFilter, setPlantFilter] = useState('All')
   const [dataSource, setDataSource] = useState('API')
   const [apiError, setApiError] = useState(null)
   const [realtimeData, setRealtimeData] = useState([])
@@ -370,7 +316,7 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
     setDataSource(sourceLabel)
     setApiError(null)
     try {
-      const res = await fetch('/jobs')
+      const res = await fetch('/demo/jobs')
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || 'API error')
@@ -393,13 +339,19 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
             Job: r.Job || r.job_id,
             Part: r.Part || r.part || '',
             Customer: r.Customer || r.customer || '',
-            WorkCenter: r.WorkCenter || r.work_center || '',
+            WorkCenter: r.WorkCenter || r.work_center || workCenter || '',
+            Plant: r.Plant || r.plant_name || r.eplant_company || (r.eplant_id ? `Plant ${r.eplant_id}` : ''),
             StartDate: r.StartDate || r.start_date || '',
             DueDate: r.DueDate || r.due_date,
             QtyReleased: r.QtyReleased || r.qty_released || '',
             QtyCompleted: r.QtyCompleted || r.qty_completed || '',
             description: r.description || '',
             risk_score: r.risk_score || 0,
+            total_order_value: r.total_order_value || r.TotalOrderValue || r.totalOrderValue || '',
+            unit_price: r.unit_price || r.UnitPrice || r.unitPrice || '',
+            plant_id: r.plant_id || r.eplant_id || '',
+            eplant_id: r.eplant_id || r.plant_id || '',
+            eplant_company: r.eplant_company || r.plant_name || '',
             material_exception: r.material_exception || false,
             MaterialShortage: r.MaterialShortage || r.material_shortage || false,
             MaterialItem: r.MaterialItem || r.material_item || '',
@@ -441,7 +393,7 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
 
   useEffect(() => {
     // Reload data when switching views to ensure it's always available
-    if ((viewMode === 'dashboard' || viewMode === 'briefing') && rawJobs.length === 0) {
+    if ((viewMode === 'dashboard' || viewMode === 'briefing' || viewMode === 'actions') && rawJobs.length === 0) {
       loadJobsFromApi('API', 'API: Canonical Provider')
       loadRealtimeFromApi()
     }
@@ -471,13 +423,20 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
     return jobs.filter((job) => {
       const statusMatch = statusFilter === 'All' || job.status === statusFilter
       const workCenterMatch = workCenterFilter === 'All' || job.WorkCenter === workCenterFilter
-      return statusMatch && workCenterMatch
+      const plantValue = getJobPlant(job)
+      const plantMatch = plantFilter === 'All' || plantValue === plantFilter
+      return statusMatch && workCenterMatch && plantMatch
     })
-  }, [jobs, statusFilter, workCenterFilter])
+  }, [jobs, statusFilter, workCenterFilter, plantFilter])
 
   const workCenters = useMemo(() => {
     const centers = new Set(jobs.map((job) => job.WorkCenter).filter(Boolean))
     return Array.from(centers).sort()
+  }, [jobs])
+
+  const plants = useMemo(() => {
+    const unique = new Set(jobs.map((job) => getJobPlant(job)).filter(Boolean))
+    return Array.from(unique).sort()
   }, [jobs])
 
   const workCenterSummary = useMemo(() => {
@@ -506,6 +465,8 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
       return b.totalJobs - a.totalJobs
     })
   }, [filteredJobs])
+
+  const plantSummary = useMemo(() => derivePlantSummary(filteredJobs), [filteredJobs])
 
   const alerts = useMemo(() => deriveAlerts(filteredJobs), [filteredJobs])
   const runList = useMemo(() => deriveRunList(filteredJobs), [filteredJobs])
@@ -553,6 +514,7 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
   })
 
   const metrics = useMemo(() => calculateMetrics(filteredJobs), [filteredJobs])
+  const overviewMetrics = useMemo(() => calculateMetrics(jobs), [jobs])
 
   return (
     <div className="app">
@@ -565,14 +527,17 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
       {viewMode === 'briefing' ? (
         <>
           <ExecutiveBriefing
-            metrics={metrics}
+            metrics={overviewMetrics}
             alerts={alerts}
             runList={runList}
             loadSummary={loadSummary}
             asOfDate={asOfDate}
+            jobs={jobs}
+            dataSource={dataSource}
           />
-          <SuggestedActionsPanel jobs={jobs} />
         </>
+      ) : viewMode === 'actions' ? (
+        <SuggestedActionsPanel jobs={jobs} />
       ) : (
         <DashboardView
           jobs={jobs}
@@ -582,17 +547,21 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
           alerts={alerts}
           runList={runList}
           loadSummary={loadSummary}
+          plantSummary={plantSummary}
           workCenterSummary={workCenterSummary}
           workCenters={workCenters}
+          plants={plants}
           asOfDate={asOfDate}
           statusFilter={statusFilter}
           workCenterFilter={workCenterFilter}
+          plantFilter={plantFilter}
           sortField={sortField}
           sortOrder={sortOrder}
           selectedDate={selectedDate}
           fileName={fileName}
           setStatusFilter={setStatusFilter}
           setWorkCenterFilter={setWorkCenterFilter}
+          setPlantFilter={setPlantFilter}
           setSortField={setSortField}
           setSortOrder={setSortOrder}
           handleSort={handleSort}

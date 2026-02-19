@@ -100,6 +100,14 @@ async function initDB() {
     await client.query(`
       ALTER TABLE jobs ADD COLUMN IF NOT EXISTS status TEXT;
     `);
+    
+    // Add financial columns if they don't exist
+    await client.query(`
+      ALTER TABLE jobs ADD COLUMN IF NOT EXISTS total_order_value NUMERIC;
+    `);
+    await client.query(`
+      ALTER TABLE jobs ADD COLUMN IF NOT EXISTS unit_price NUMERIC;
+    `);
 
     // Inventory table for tracking parts and thresholds (unchanged)
     await client.query(`

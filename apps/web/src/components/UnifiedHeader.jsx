@@ -31,18 +31,25 @@ export default function UnifiedHeader({
             Operational Dashboard
           </button>
           <button
-            className={`unified-header__nav-btn ${currentView === 'financial' ? 'active' : ''}`}
-            onClick={() => onViewChange('financial')}
-            title="View financial summary"
-          >
-            Financial Summary
-          </button>
-          <button
             className={`unified-header__nav-btn ${currentView === 'plant-pulse' ? 'active' : ''}`}
             onClick={() => onViewChange('plant-pulse')}
             title="View machine health & predictive maintenance"
           >
             Plant Pulse
+          </button>
+          <button
+            className={`unified-header__nav-btn ${currentView === 'actions' ? 'active' : ''}`}
+            onClick={() => onViewChange('actions')}
+            title="View action items"
+          >
+            Action Items
+          </button>
+          <button
+            className={`unified-header__nav-btn ${currentView === 'financial' ? 'active' : ''}`}
+            onClick={() => onViewChange('financial')}
+            title="View financial summary"
+          >
+            Financial Summary
           </button>
         </nav>
       </div>

@@ -63,6 +63,7 @@ WITH job_data AS (
     -- System fields
     V_SCHED_HRS_TO_GO.ID AS schedule_id,
     WORKORDER.EPLANT_ID AS plant_id,
+    EPLANT.NAME AS eplant_company,
     
     -- Row number to get only first record per job
     ROW_NUMBER() OVER (PARTITION BY V_SCHED_HRS_TO_GO.WORKORDER_ID ORDER BY PTALLOCATE.PROMISE_DATE ASC NULLS LAST, PTALLOCATE.ID) AS rn
@@ -114,6 +115,9 @@ WITH job_data AS (
   
   LEFT OUTER JOIN IQMS.ARCUSTO ARCUSTO
     ON WORKORDER.ARCUSTO_ID = ARCUSTO.ID
+
+  LEFT OUTER JOIN IQMS.EPLANT EPLANT
+    ON WORKORDER.EPLANT_ID = EPLANT.ID
 
   -- Material shortage: pick the largest short item per job
   LEFT OUTER JOIN (

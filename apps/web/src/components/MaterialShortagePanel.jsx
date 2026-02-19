@@ -119,7 +119,7 @@ export default function MaterialShortagePanel({ jobs, importStats }) {
   if (!hasSignals) {
     return (
       <div className="material-shortage-panel">
-        <h3>Material Shortages</h3>
+        <h3>Material Status</h3>
         <div className="empty-state">
           <p>Material shortage signals not included in this snapshot</p>
         </div>
@@ -130,7 +130,7 @@ export default function MaterialShortagePanel({ jobs, importStats }) {
   if (shortages.length === 0) {
     return (
       <div className="material-shortage-panel">
-        <h3>Material Shortages</h3>
+        <h3>Material Status</h3>
         <div className="empty-state">
           <p>No material shortages flagged in this snapshot</p>
         </div>
@@ -140,7 +140,7 @@ export default function MaterialShortagePanel({ jobs, importStats }) {
 
   return (
     <div className="material-shortage-panel">
-      <h3>Material Shortages</h3>
+      <h3>Material Status</h3>
       <p className="panel-description">
         Jobs requiring materials to meet due dates
       </p>

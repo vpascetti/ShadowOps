@@ -332,6 +332,15 @@ body {
   width: 100%;
 }
 
+.metric-card.clickable {
+  cursor: pointer;
+}
+
+.metric-card.clickable:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .metric-card:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
@@ -913,6 +922,10 @@ body {
   padding: 1rem 1.25rem;
   border-radius: 8px;
   margin-bottom: 1rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .briefing-header h2 {
@@ -922,6 +935,19 @@ body {
 .briefing-sub {
   color: #666;
   font-size: 0.95rem;
+}
+
+.briefing-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.briefing-meta span {
+  white-space: nowrap;
 }
 
 .briefing-grid {
@@ -968,6 +994,127 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 1rem;
+}
+
+.briefing-plant-panel {
+  border-left: 4px solid #dc2626;
+}
+
+.briefing-plant-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.briefing-plant-header h3 {
+  margin: 0;
+}
+
+.briefing-plant-subtitle {
+  margin: 0.35rem 0 0 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.briefing-plant-close {
+  border: 1px solid #e5e7eb;
+  background: white;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.briefing-plant-close:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.briefing-plant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.briefing-plant-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.9rem;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.briefing-plant-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.briefing-plant-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  color: #475569;
+}
+
+.briefing-plant-tag.cause {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+}
+
+.briefing-plant-tag.owner {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.briefing-plant-title {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.briefing-plant-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.briefing-plant-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 0.2rem;
+}
+
+.briefing-plant-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.briefing-plant-value.late {
+  color: #dc2626;
+}
+
+.briefing-glance {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #111827;
+  line-height: 1.45;
+}
+
+.briefing-glance li {
+  margin-bottom: 0.4rem;
 }
 
 .risk-card,
