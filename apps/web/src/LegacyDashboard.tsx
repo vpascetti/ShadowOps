@@ -323,44 +323,31 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
       }
       const data = await res.json()
       const jobs = Array.isArray(data.jobs) ? data.jobs : []
-      const mapped = await Promise.all(
-        jobs.map(async (r) => {
-          let workCenter = ''
-          try {
-            const detailRes = await fetch(`/jobs/${r.job_id}`)
-            const detailJson = await detailRes.json()
-            const op = detailJson.operations?.[0]
-            workCenter = op?.resource_id || ''
-          } catch (_e) {
-            workCenter = ''
-          }
-
-          return {
-            Job: r.Job || r.job_id,
-            Part: r.Part || r.part || '',
-            Customer: r.Customer || r.customer || '',
-            WorkCenter: r.WorkCenter || r.work_center || workCenter || '',
-            Plant: r.Plant || r.plant_name || r.eplant_company || (r.eplant_id ? `Plant ${r.eplant_id}` : ''),
-            StartDate: r.StartDate || r.start_date || '',
-            DueDate: r.DueDate || r.due_date,
-            QtyReleased: r.QtyReleased || r.qty_released || '',
-            QtyCompleted: r.QtyCompleted || r.qty_completed || '',
-            description: r.description || '',
-            risk_score: r.risk_score || 0,
-            total_order_value: r.total_order_value || r.TotalOrderValue || r.totalOrderValue || '',
-            unit_price: r.unit_price || r.UnitPrice || r.unitPrice || '',
-            plant_id: r.plant_id || r.eplant_id || '',
-            eplant_id: r.eplant_id || r.plant_id || '',
-            eplant_company: r.eplant_company || r.plant_name || '',
-            material_exception: r.material_exception || false,
-            MaterialShortage: r.MaterialShortage || r.material_shortage || false,
-            MaterialItem: r.MaterialItem || r.material_item || '',
-            MaterialRequiredQty: r.MaterialRequiredQty || r.material_required_qty || 0,
-            MaterialIssuedQty: r.MaterialIssuedQty || r.material_issued_qty || 0,
-            MaterialShortQty: r.MaterialShortQty || r.material_short_qty || 0
-          }
-        })
-      )
+      // OPTIMIZATION: Use work_center directly from API response instead of N+1 queries
+      const mapped = jobs.map((r) => ({
+        Job: r.Job || r.job_id,
+        Part: r.Part || r.part || '',
+        Customer: r.Customer || r.customer || '',
+        WorkCenter: r.WorkCenter || r.work_center || '',
+        Plant: r.Plant || r.plant_name || r.eplant_company || (r.eplant_id ? `Plant ${r.eplant_id}` : ''),
+        StartDate: r.StartDate || r.start_date || '',
+        DueDate: r.DueDate || r.due_date,
+        QtyReleased: r.QtyReleased || r.qty_released || '',
+        QtyCompleted: r.QtyCompleted || r.qty_completed || '',
+        description: r.description || '',
+        risk_score: r.risk_score || 0,
+        total_order_value: r.total_order_value || r.TotalOrderValue || r.totalOrderValue || '',
+        unit_price: r.unit_price || r.UnitPrice || r.unitPrice || '',
+        plant_id: r.plant_id || r.eplant_id || '',
+        eplant_id: r.eplant_id || r.plant_id || '',
+        eplant_company: r.eplant_company || r.plant_name || '',
+        material_exception: r.material_exception || false,
+        MaterialShortage: r.MaterialShortage || r.material_shortage || false,
+        MaterialItem: r.MaterialItem || r.material_item || '',
+        MaterialRequiredQty: r.MaterialRequiredQty || r.material_required_qty || 0,
+        MaterialIssuedQty: r.MaterialIssuedQty || r.material_issued_qty || 0,
+        MaterialShortQty: r.MaterialShortQty || r.material_short_qty || 0
+      }))
       setRawJobs(mapped)
       setFileName(fileLabel)
     } catch (err) {

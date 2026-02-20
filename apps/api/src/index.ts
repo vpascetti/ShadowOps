@@ -4,6 +4,8 @@ import dotenv from 'dotenv'
 import { getProvider } from './providers/index.js'
 import type { RealtimePartNumber, JobMaterialDetail } from './providers/iqmsOracleProvider.js'
 import { ensureDemoTenantAndToken, initDB, pool } from '../db.js'
+import { startSnapshotService } from '../snapshot-service.js'
+import { enrichJobWithPredictions, getWorkCenterAnomalies } from '../forecast-enrichment.js'
 
 dotenv.config()
 
@@ -233,11 +235,30 @@ const handleJobMaterials = async (req, res) => {
 app.get('/jobs/:id/materials', handleJobMaterials)
 app.get('/api/jobs/:id/materials', handleJobMaterials)
 
+// ================ PREDICTIVE ANALYTICS ENDPOINTS ================
+
+// Get anomalies for all work centers (dashboard view)
+app.get('/api/anomalies/dashboard', async (_req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    const anomalies = await getWorkCenterAnomalies(tenantId, 'ALL', 30)
+    return res.json({ ok: true, anomalies })
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: (error as Error).message })
+  }
+})
+
 const start = async () => {
   await initDB()
+  const { tenantId } = await ensureDemoTenantAndToken()
+  
+  // Start snapshot recording service (every 15 minutes)
+  startSnapshotService(tenantId, 15)
+  
   app.listen(port, () => {
     // eslint-disable-next-line no-console
-    console.log(`ShadowOps API listening on ${port}`)
+    console.log(`ShadowOps backend listening on ${port}`)
+    console.log('[Predictive Analytics] Snapshot service started - recording every 15 minutes')
   })
 }
 

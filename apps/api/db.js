@@ -109,6 +109,56 @@ async function initDB() {
       ALTER TABLE jobs ADD COLUMN IF NOT EXISTS unit_price NUMERIC;
     `);
 
+    // Job snapshots for trend analysis (forecasting)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS job_snapshots (
+        id SERIAL PRIMARY KEY,
+        tenant_id INTEGER REFERENCES tenants(id),
+        snapshot_date TIMESTAMP NOT NULL,
+        job_id INTEGER NOT NULL,
+        hours_to_go NUMERIC,
+        qty_completed NUMERIC,
+        status TEXT,
+        created_at TIMESTAMP DEFAULT now(),
+        UNIQUE (tenant_id, snapshot_date, job_id),
+        CHECK (snapshot_date <= created_at)
+      );
+    `);
+
+    // Work center performance history (for anomaly detection)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS work_center_metrics (
+        id SERIAL PRIMARY KEY,
+        tenant_id INTEGER REFERENCES tenants(id),
+        work_center TEXT NOT NULL,
+        metric_date TIMESTAMP NOT NULL,
+        throughput NUMERIC,
+        avg_cycle_time NUMERIC,
+        queue_depth INTEGER,
+        utilization NUMERIC,
+        scrap_rate NUMERIC,
+        created_at TIMESTAMP DEFAULT now(),
+        UNIQUE (tenant_id, work_center, metric_date)
+      );
+    `);
+
+    // Predictions (forecasts for individual jobs)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS job_predictions (
+        id SERIAL PRIMARY KEY,
+        tenant_id INTEGER REFERENCES tenants(id),
+        job_id INTEGER NOT NULL,
+        prediction_date TIMESTAMP NOT NULL,
+        method TEXT NOT NULL,
+        predicted_completion_date TIMESTAMP,
+        predicted_lateness_days NUMERIC,
+        confidence_score NUMERIC,
+        basis TEXT,
+        created_at TIMESTAMP DEFAULT now(),
+        UNIQUE (tenant_id, job_id, prediction_date, method)
+      );
+    `);
+
     // Inventory table for tracking parts and thresholds (unchanged)
     await client.query(`
       CREATE TABLE IF NOT EXISTS inventory (
