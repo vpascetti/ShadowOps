@@ -40,6 +40,10 @@ export type RealtimePartNumber = {
   op_desc?: string
   op_no?: string
   start_time?: string
+  // PM Schedule fields from PMJOB integration
+  next_pm_due_date?: string | null
+  days_until_next_pm?: number | null
+  pm_status?: string | null
 }
 
 export type JobMaterialDetail = {

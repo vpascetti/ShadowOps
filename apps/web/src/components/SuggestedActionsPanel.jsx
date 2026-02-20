@@ -17,6 +17,10 @@ export default function SuggestedActionsPanel({ jobs = [] }) {
   const [fallbackJobs, setFallbackJobs] = useState([]);
   const [fallbackLoading, setFallbackLoading] = useState(false);
   const [fallbackError, setFallbackError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [severityFilter, setSeverityFilter] = useState('all');
+  const [ownerFilter, setOwnerFilter] = useState('all');
+  const itemsPerPage = 15;
 
   useEffect(() => {
     if (jobs && jobs.length > 0) return;
@@ -118,6 +122,25 @@ export default function SuggestedActionsPanel({ jobs = [] }) {
 
   const getCriticalCount = () => actions.filter(a => a.severity === 'critical').length;
   const getHighCount = () => actions.filter(a => a.severity === 'high').length;
+  const getUniqueOwners = () => [...new Set(actions.map(a => a.owner))].sort();
+
+  // Apply filters
+  const filteredActions = actions.filter(action => {
+    if (severityFilter !== 'all' && action.severity !== severityFilter) return false;
+    if (ownerFilter !== 'all' && action.owner !== ownerFilter) return false;
+    return true;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredActions.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const endIdx = startIdx + itemsPerPage;
+  const paginatedActions = filteredActions.slice(startIdx, endIdx);
+
+  // Reset page if filters narrowed results
+  if (currentPage > totalPages && totalPages > 0) {
+    setCurrentPage(1);
+  }
 
   return (
     <section className="suggested-actions-panel">
@@ -135,13 +158,56 @@ export default function SuggestedActionsPanel({ jobs = [] }) {
             </span>
           )}
           <span className="count info">
-            {actions.length} Total
+            {filteredActions.length} of {actions.length} Total
           </span>
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="actions-filters">
+        <div className="filter-group">
+          <label>Severity:</label>
+          <select value={severityFilter} onChange={(e) => {
+            setSeverityFilter(e.target.value);
+            setCurrentPage(1);
+          }}>
+            <option value="all">All Severities</option>
+            {['critical', 'high', 'medium', 'low'].map(severity => {
+              const count = actions.filter(a => a.severity === severity).length;
+              return count > 0 ? (
+                <option key={severity} value={severity}>
+                  {severity.charAt(0).toUpperCase() + severity.slice(1)} ({count})
+                </option>
+              ) : null;
+            })}
+          </select>
+        </div>
+
+        <div className="filter-group">
+          <label>Owner:</label>
+          <select value={ownerFilter} onChange={(e) => {
+            setOwnerFilter(e.target.value);
+            setCurrentPage(1);
+          }}>
+            <option value="all">All Owners</option>
+            {getUniqueOwners().map(owner => {
+              const count = actions.filter(a => a.owner === owner).length;
+              return (
+                <option key={owner} value={owner}>
+                  {owner} ({count})
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <div className="filter-info">
+          Showing {startIdx + 1}–{Math.min(endIdx, filteredActions.length)} of {filteredActions.length}
+        </div>
+      </div>
+
       <div className="actions-list">
-        {actions.slice(0, 10).map((action, idx) => {
+        {paginatedActions.map((action, idx) => {
           const urgencyScore = scoreActionUrgency(action);
           const urgencyPercent = Math.min((urgencyScore / 200) * 100, 100);
 
@@ -206,6 +272,30 @@ export default function SuggestedActionsPanel({ jobs = [] }) {
         })}
       </div>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="actions-pagination">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="pagination-btn"
+          >
+            ← Previous
+          </button>
+
+          <div className="pagination-info">
+            Page {currentPage} of {totalPages}
+          </div>
+
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="pagination-btn"
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </section>
   );
 }

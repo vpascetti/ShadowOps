@@ -184,6 +184,10 @@ type RealtimePartNumber = {
   has_qc_issues?: boolean
   qc_issue_count?: number
   run_qty?: number
+  // PM Schedule fields from PMJOB
+  next_pm_due_date?: string | null
+  days_until_next_pm?: number | null
+  pm_status?: string | null
 }
 
 const analyzeRealtimeMachines = (realtime: RealtimePartNumber[]): MachineTendency[] => {
@@ -235,7 +239,34 @@ const analyzeRealtimeMachines = (realtime: RealtimePartNumber[]): MachineTendenc
       error_rate: errorRate || 0,
       error_trend: 0,
       predicted_downtime_hours: downHours,
-      maintenance_due_in_days: health === 'critical' ? 1 : health === 'warning' ? 5 : 14,
+      maintenance_due_in_days: (() => {
+        // Health-based prediction (fallback)
+        const healthBasedDays = health === 'critical' ? 1 : health === 'warning' ? 5 : 14
+        
+        // Get scheduled PM from PMJOB data
+        const scheduledDays = pick?.days_until_next_pm
+        
+        // Combine both signals:
+        // - If PM is overdue or very soon, that takes priority
+        // - If health is critical but PM is far away, health wins
+        // - If no PM schedule, fall back to health-based estimate
+        if (scheduledDays !== null && scheduledDays !== undefined) {
+          // We have real PM schedule data
+          if (scheduledDays <= 0) {
+            // PM is overdue - show it
+            return scheduledDays
+          } else if (scheduledDays <= healthBasedDays) {
+            // Scheduled PM is sooner than health prediction - use schedule
+            return scheduledDays
+          } else {
+            // Health prediction is more urgent - use health
+            return healthBasedDays
+          }
+        }
+        
+        // No PM schedule available - use health-based estimate
+        return healthBasedDays
+      })(),
       history: [],
       predicted_issues: predictedIssues,
       recommended_action:

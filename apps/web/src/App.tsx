@@ -104,7 +104,14 @@ export default function App() {
     }
   }, [queryString, reloadToken])
 
+  // Auto-refresh data every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setReloadToken(prev => prev + 1)
+    }, 5 * 60 * 1000) // 5 minutes in milliseconds
 
+    return () => clearInterval(interval)
+  }, [])
 
   const formatRiskReason = (reason?: string) => {
     if (!reason) return '—'

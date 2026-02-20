@@ -21,6 +21,7 @@ export default function MaterialShortagePanel({ jobs, importStats }) {
   const [expandedJobs, setExpandedJobs] = useState({})
   const [materialDetails, setMaterialDetails] = useState({})
   const [loadingDetails, setLoadingDetails] = useState({})
+  const [jobsWithoutShortages, setJobsWithoutShortages] = useState(new Set())
   
   const hasSignals = datasetHasShortageSignals(importStats, jobs)
 
@@ -67,6 +68,13 @@ export default function MaterialShortagePanel({ jobs, importStats }) {
           .filter(mat => mat.shortage_qty > 0) // Only show actual shortages
           .sort((a, b) => b.shortage_qty - a.shortage_qty)
           .slice(0, 20) // Limit to top 20 shortages
+        
+        // If no materials with shortages found, mark this job as having no shortages
+        if (materialsArray.length === 0) {
+          setJobsWithoutShortages(prev => new Set([...prev, jobId]))
+          setExpandedJobs(prev => ({ ...prev, [jobId]: false }))
+          return
+        }
         
         setMaterialDetails(prev => ({ ...prev, [jobId]: materialsArray }))
       }
@@ -149,12 +157,23 @@ export default function MaterialShortagePanel({ jobs, importStats }) {
         Jobs requiring materials to meet due dates
       </p>
       <div className="shortage-list">
-        {shortages.map((shortage) => {
-          const isExpanded = expandedJobs[shortage.job]
-          const details = materialDetails[shortage.job] || []
-          const isLoading = loadingDetails[shortage.job]
+        {(() => {
+          const filteredShortages = shortages.filter(shortage => !jobsWithoutShortages.has(shortage.job))
           
-          return (
+          if (filteredShortages.length === 0) {
+            return (
+              <div className="empty-state">
+                <p>No material shortages flagged in this snapshot</p>
+              </div>
+            )
+          }
+          
+          return filteredShortages.map((shortage) => {
+            const isExpanded = expandedJobs[shortage.job]
+            const details = materialDetails[shortage.job] || []
+            const isLoading = loadingDetails[shortage.job]
+            
+            return (
             <div key={shortage.id} className={`shortage-card ${shortage.severity}`}>
               <div className="shortage-header" onClick={() => toggleExpanded(shortage.job)} style={{ cursor: 'pointer' }}>
                 <div className="shortage-job">
@@ -239,8 +258,9 @@ export default function MaterialShortagePanel({ jobs, importStats }) {
                 </div>
               )}
             </div>
-          )
-        })}
+            )
+          })
+        })()}
       </div>
     </div>
   )

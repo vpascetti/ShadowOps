@@ -113,7 +113,6 @@ const handleFinancialSummary = async (req, res) => {
 
     // Calculate metrics based on available Job fields
     const totalJobs = jobs.length
-    const completedJobs = jobs.filter((j: any) => j.status === 'closed').length
     const totalRemainingWork = jobs.reduce((sum: number, j: any) => sum + (parseFloat(j.remaining_work) || 0), 0)
 
     const now = new Date()
@@ -156,7 +155,40 @@ const handleFinancialSummary = async (req, res) => {
         return sum + orderValue
       }, 0)
     
-    const onTimeDeliveryPct = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0
+    // Calculate on-time delivery from shipping data
+    // TODO: Need proper shipping date query - work order completion != ship date
+    // Disabled until we have correct SQL from shipping report
+    let onTimeDeliveryPct = null
+    let completedJobs = null
+    let onTimeJobs = null
+    
+    /* DISABLED - Need actual shipping date data
+    try {
+      const histQuery = `
+        SELECT 
+          COALESCE(hw.MUST_SHIP_DATE, hw.PROMISE_DATE) AS DUE_DATE,
+          hw.HIST_WORKORDER_TIMESTAMP AS SHIP_DATE
+        FROM IQMS.HIST_WORKORDER hw
+        WHERE hw.HIST_WORKORDER_TIMESTAMP >= SYSDATE - 90
+          AND hw.HIST_WORKORDER_TIMESTAMP IS NOT NULL
+          AND COALESCE(hw.MUST_SHIP_DATE, hw.PROMISE_DATE) IS NOT NULL
+      `
+      
+      const histJobs = await (provider as any).executeQuery(histQuery)
+      completedJobs = histJobs.length
+      
+      onTimeJobs = histJobs.filter((job: any) => {
+        if (!job.DUE_DATE || !job.SHIP_DATE) return false
+        const dueDate = new Date(job.DUE_DATE)
+        const shipDate = new Date(job.SHIP_DATE)
+        return shipDate <= dueDate
+      }).length
+      
+      onTimeDeliveryPct = completedJobs > 0 ? (onTimeJobs / completedJobs) * 100 : 0
+    } catch (histError) {
+      console.warn('Could not fetch historical delivery data:', histError)
+    }
+    */
     
     // Calculate total quantity from actual orders
     const totalQtyOrdered = jobs.reduce((sum: number, j: any) => {
@@ -178,12 +210,13 @@ const handleFinancialSummary = async (req, res) => {
         delayedOrderImpact: parseFloat(delayedOrderImpact.toFixed(2)),
         wipValue: parseFloat(wipValue.toFixed(2)),
         totalOrderValue: parseFloat(totalOrderValue.toFixed(2)),
-        onTimeDeliveryPct: parseFloat(onTimeDeliveryPct.toFixed(2)),
+        onTimeDeliveryPct: onTimeDeliveryPct !== null ? parseFloat(onTimeDeliveryPct.toFixed(2)) : null,
         throughput: 0 // Not available in current schema
       },
       metrics: {
         totalJobs,
         completedJobs,
+        onTimeJobs,
         totalRemainingWork: parseFloat(totalRemainingWork.toFixed(2)),
         overdueCount,
         dueSoonCount,

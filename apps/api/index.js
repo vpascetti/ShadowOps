@@ -236,8 +236,8 @@ app.get('/api/realtime/part-numbers', async (req, res) => {
       })
     }
 
-    // Load SQL query from file
-    const sql = fs.readFileSync('./sql/iqms_realtime_part_numbers.sql', 'utf8')
+    // Load SQL query from file (with PM schedule integration)
+    const sql = fs.readFileSync('./sql/iqms_realtime_with_pmjob.sql', 'utf8')
     
     // Query IQMS for realtime machine data
     const rows = await queryIQMS(sql)
@@ -269,7 +269,11 @@ app.get('/api/realtime/part-numbers', async (req, res) => {
       run_qty: parseFloat(row.RUN_QTY) || 0,
       op_desc: row.OP_DESC,
       op_no: row.OP_NO,
-      start_time: row.START_TIME
+      start_time: row.START_TIME,
+      // NEW: PM Schedule fields from PMJOB
+      next_pm_due_date: row.NEXT_PM_DUE_DATE ? new Date(row.NEXT_PM_DUE_DATE).toISOString().split('T')[0] : null,
+      days_until_next_pm: row.DAYS_UNTIL_NEXT_PM != null ? parseInt(row.DAYS_UNTIL_NEXT_PM) : null,
+      pm_status: row.PM_STATUS || null
     }))
 
     // Add caching headers for realtime data (shorter cache)
@@ -317,10 +321,7 @@ app.get('/api/financial-summary', async (req, res) => {
           vsh.HOURS_TO_GO AS hours_to_go,
           w.MUST_SHIP_DATE AS ship_date,
           COALESCE(w.MUST_SHIP_DATE, w.PROMISE_DATE, w.END_TIME) AS due_date,
-          CASE 
-            WHEN COALESCE(w.MUST_SHIP_DATE, w.PROMISE_DATE, w.END_TIME) < SYSDATE THEN 'closed'
-            ELSE 'open'
-          END AS status
+          'open' AS status
         FROM WORKORDER w
           LEFT JOIN V_SCHED_HRS_TO_GO vsh ON vsh.WORKORDER_ID = w.ID
           LEFT JOIN V_SCHED_PARTS_TO_GO parts ON parts.WORKORDER_ID = w.ID
@@ -332,7 +333,7 @@ app.get('/api/financial-summary', async (req, res) => {
         qty_completed: parseFloat(row.QTY_COMPLETED) || 0,
         hours_to_go: parseFloat(row.HOURS_TO_GO) || 0,
         due_date: row.DUE_DATE,
-        status: row.STATUS
+        status: 'open'  // All jobs from WORKORDER table are active (archived in HIST_WORKORDER)
       }))
     } catch (iqmsErr) {
       throw new Error(`IQMS query failed: ${iqmsErr.message}`)
@@ -340,7 +341,6 @@ app.get('/api/financial-summary', async (req, res) => {
 
     // Calculate financial metrics from the job data
     const totalJobs = jobs.length
-    const completedJobs = jobs.filter(j => j.status === 'closed').length
     const totalQtyReleased = jobs.reduce((sum, j) => sum + j.qty_released, 0)
     const totalQtyCompleted = jobs.reduce((sum, j) => sum + j.qty_completed, 0)
     const totalHoursRemaining = jobs.reduce((sum, j) => sum + j.hours_to_go, 0)
@@ -356,12 +356,49 @@ app.get('/api/financial-summary', async (req, res) => {
     
     const wipQty = jobs.reduce((sum, j) => sum + (j.qty_released - j.qty_completed), 0)
 
+    // Calculate on-time delivery from shipping data
+    // TODO: Need proper shipping date query - work order completion != ship date
+    // Work orders close early but shipping can still be late
+    // Disabled until we have correct SQL from shipping report
+    let onTimeDeliveryPct = null  // Show as N/A
+    let completedJobs = null
+    let onTimeJobs = null
+    
+    /* DISABLED - Need shipping date data, not work order close date
+    try {
+      console.log('Querying HIST_WORKORDER for on-time delivery metrics (last 90 days)...')
+      const histJobs = await queryIQMS(`
+        SELECT 
+          COALESCE(hw.MUST_SHIP_DATE, hw.PROMISE_DATE) AS DUE_DATE,
+          hw.HIST_WORKORDER_TIMESTAMP AS COMPLETION_DATE
+        FROM IQMS.HIST_WORKORDER hw
+        WHERE hw.HIST_WORKORDER_TIMESTAMP >= SYSDATE - 90
+          AND hw.HIST_WORKORDER_TIMESTAMP IS NOT NULL
+          AND COALESCE(hw.MUST_SHIP_DATE, hw.PROMISE_DATE) IS NOT NULL
+      `)
+      
+      completedJobs = histJobs.length
+      console.log(`Found ${completedJobs} completed jobs in last 90 days`)
+      
+      onTimeJobs = histJobs.filter(job => {
+        if (!job.DUE_DATE || !job.COMPLETION_DATE) return false
+        const dueDate = new Date(job.DUE_DATE)
+        const completionDate = new Date(job.COMPLETION_DATE)
+        return completionDate <= dueDate
+      }).length
+      
+      onTimeDeliveryPct = completedJobs > 0 ? (onTimeJobs / completedJobs) * 100 : 0
+      console.log(`On-time delivery: ${onTimeJobs}/${completedJobs} = ${onTimeDeliveryPct.toFixed(1)}%`)
+    } catch (histErr) {
+      console.warn('Could not fetch historical delivery data:', histErr.message)
+    }
+    */
+
     // Calculate financial metrics
     const revenueAtRisk = totalQtyReleased * uPrice
     const delayedOrderImpact = (overdueCount + dueSoonCount) * (uPrice * 100) // avg 100 units per order
     const resourceCosts = totalHoursRemaining * hourRate
     const wipValue = wipQty * uPrice
-    const onTimeDeliveryPct = totalJobs > 0 ? ((completedJobs / totalJobs) * 100) : 0
     const throughput = totalHoursRemaining > 0 ? (totalQtyCompleted / totalHoursRemaining) : 0
 
     res.json({
@@ -372,12 +409,13 @@ app.get('/api/financial-summary', async (req, res) => {
         delayedOrderImpact: parseFloat(delayedOrderImpact.toFixed(2)),
         resourceCosts: parseFloat(resourceCosts.toFixed(2)),
         wipValue: parseFloat(wipValue.toFixed(2)),
-        onTimeDeliveryPct: parseFloat(onTimeDeliveryPct.toFixed(2)),
+        onTimeDeliveryPct: onTimeDeliveryPct !== null ? parseFloat(onTimeDeliveryPct.toFixed(2)) : null,
         throughput: parseFloat(throughput.toFixed(4))
       },
       metrics: {
         totalJobs,
         completedJobs,
+        onTimeJobs,
         totalQtyReleased,
         totalQtyCompleted,
         totalHoursRemaining,

@@ -1,6 +1,11 @@
 -- ShadowOps: FAST job data query (simplified version)
 -- This version skips expensive material shortage calculations for better performance
 -- Use this when you need quick dashboard loads
+--
+-- FIXES APPLIED (Feb 20, 2026):
+-- 1. Fixed ORD_DETAIL join: Use ARINVT_ID to match correct line item (prevents Cartesian join inflation)
+-- 2. Use UNIT_PRICE * TOTAL_QTY_ORD (not MFG_QUAN which was ~10x too high for SYGMANET orders)
+-- 3. Archived orders automatically excluded (they're in HIST_ORDERS/HIST_ORD_DETAIL tables)
 
 WITH job_data AS (
   SELECT /*+ MATERIALIZE */
@@ -36,9 +41,9 @@ WITH job_data AS (
    PTALLOCATE.SHIP_QUAN AS ship_quantity,
     PTALLOCATE.MFG_QUAN AS mfg_quantity,
     
-    -- Pricing from order detail
+    -- Pricing from order detail (use actual order quantity)
     ORD_DETAIL.UNIT_PRICE AS unit_price,
-    (ORD_DETAIL.UNIT_PRICE * PTALLOCATE.MFG_QUAN) AS total_order_value,
+    (ORD_DETAIL.UNIT_PRICE * ORD_DETAIL.TOTAL_QTY_ORD) AS total_order_value,
     
     -- Material Availability (FAST - only flag, no details)
     WORKORDER.IS_XCPT_MAT AS material_exception,
@@ -105,10 +110,12 @@ WITH job_data AS (
     ON WORKORDER.ARCUSTO_ID = ARCUSTO.ID
   
   -- Pricing from ORD_DETAIL (via ORDERS)
+  -- Note: Archived orders are in HIST_ORDERS/HIST_ORD_DETAIL (not queried here)
   LEFT OUTER JOIN IQMS.ORDERS ORDERS
     ON ORDERS.ORDERNO = PTORDER_REL.ORDERNO
   LEFT OUTER JOIN IQMS.ORD_DETAIL ORD_DETAIL
     ON ORD_DETAIL.ORDERS_ID = ORDERS.ID
+    AND ORD_DETAIL.ARINVT_ID = ARINVT.ID  -- Match correct line item by inventory
   
   -- Work Center Capacity Data (aggregated)
   LEFT OUTER JOIN (
@@ -128,6 +135,7 @@ WITH job_data AS (
     AND V_SCHED_HRS_TO_GO.CNTR_SEQ = WO_TOTALS.first_operation_seq
     -- Only include jobs that are scheduled on a work center
     AND WORK_CENTER.EQNO IS NOT NULL
+    -- Note: Archived orders filtered by using ORDERS (not HIST_ORDERS)
 ),
 ranked_jobs AS (
   SELECT 

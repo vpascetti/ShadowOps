@@ -84,10 +84,12 @@ export default function FinancialSummary() {
 
         <article className="financial__card financial__card--ontime">
           <div className="card__icon"></div>
-          <p className="card__label">On-Time Delivery Rate</p>
-          <p className="card__value">{formatPercent(fin.onTimeDeliveryPct)}</p>
+          <p className="card__label">On-Time Delivery Rate (90d)</p>
+          <p className="card__value">{fin.onTimeDeliveryPct !== null ? formatPercent(fin.onTimeDeliveryPct) : 'N/A'}</p>
           <p className="card__detail">
-            {metrics.completedJobs} of {metrics.totalJobs} jobs completed
+            {metrics.onTimeJobs && metrics.completedJobs 
+              ? `${metrics.onTimeJobs} of ${metrics.completedJobs} jobs on-time`
+              : 'Pending shipping data integration'}
           </p>
         </article>
 
