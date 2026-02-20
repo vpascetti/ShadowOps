@@ -292,6 +292,7 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
   const [selectedDate, setSelectedDate] = useState('')
   const [asOfDate, setAsOfDate] = useState(new Date())
   const [fileName, setFileName] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
 
   const [sortField, setSortField] = useState('Job')
   const [sortOrder, setSortOrder] = useState('asc')
@@ -315,6 +316,7 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
   const loadJobsFromApi = async (sourceLabel = 'API', fileLabel = 'API: Canonical Provider') => {
     setDataSource(sourceLabel)
     setApiError(null)
+    setIsLoading(true)
     try {
       const res = await fetch('/demo/jobs')
       if (!res.ok) {
@@ -353,6 +355,8 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
     } catch (err) {
       setApiError(err.message)
       setRawJobs([])
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -505,9 +509,61 @@ export default function LegacyDashboard({ onExit, currentView = 'briefing', onVi
 
   return (
     <div className="app">
+      {isLoading && (
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'rgba(255, 255, 255, 0.95)',
+          padding: '2rem',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          zIndex: 1000,
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '0.5rem' }}>Loading jobs...</div>
+          <div style={{ color: '#666' }}>Fetching data from IQMS</div>
+        </div>
+      )}
       {apiError && (
-        <div style={{ color: 'red', fontWeight: 600, margin: '1em' }}>
-          Error loading jobs from API: {apiError}
+        <div style={{
+          background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+          border: '2px solid #dc2626',
+          borderRadius: '8px',
+          padding: '1.5rem',
+          margin: '1rem',
+          boxShadow: '0 4px 12px rgba(220, 38, 38, 0.15)'
+        }}>
+          <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#991b1b', marginBottom: '0.5rem' }}>
+            ⚠️ Unable to Load Jobs
+          </div>
+          <div style={{ color: '#7f1d1d', marginBottom: '1rem' }}>
+            {apiError.includes('fetch') || apiError.includes('network') 
+              ? 'Network connection failed. Please check your connection and try again.'
+              : apiError.includes('API error')
+              ? 'The IQMS service is temporarily unavailable. Please try again in a moment.'
+              : `Error: ${apiError}`}
+          </div>
+          <button
+            onClick={() => loadJobsFromApi('API', 'API: Canonical Provider')}
+            style={{
+              background: 'linear-gradient(90deg, #dc2626, #b91c1c)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '0.75rem 1.5rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)',
+              transition: 'transform 0.1s ease'
+            }}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            🔄 Retry
+          </button>
         </div>
       )}
 

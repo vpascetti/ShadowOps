@@ -11,7 +11,7 @@ WITH job_data AS (
     ARCUSTO.CUSTNO AS customer,
     
     -- Timing & Dates (Late Delivery Risk)
-    PTALLOCATE.PROMISE_DATE AS due_date,
+    COALESCE(PTALLOCATE.PROMISE_DATE, PTALLOCATE.MUST_SHIP_DATE) AS due_date,
     PTALLOCATE.MUST_SHIP_DATE AS must_ship_date,
     V_SCHED_HRS_TO_GO.PROD_START_TIME AS prod_start_time,
     V_SCHED_HRS_TO_GO.PROD_END_TIME AS prod_end_time,

@@ -30,7 +30,10 @@ export default function MaterialShortagePanel({ jobs, importStats }) {
     
     setLoadingDetails(prev => ({ ...prev, [jobId]: true }))
     try {
-      const response = await fetch(`/jobs/${jobId}/materials`)
+      const response = await fetch(`/api/jobs/${jobId}/materials`)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch materials (HTTP ${response.status})`)
+      }
       const data = await response.json()
       if (data.ok && data.materials) {
         // Aggregate materials by item_no (sum quantities, find date range)

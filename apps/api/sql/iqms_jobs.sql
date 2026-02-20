@@ -10,7 +10,7 @@ WITH job_data AS (
     ARCUSTO.CUSTNO AS customer,
     
     -- Timing & Dates (Late Delivery Risk)
-    PTALLOCATE.PROMISE_DATE AS due_date,
+    COALESCE(PTALLOCATE.PROMISE_DATE, PTALLOCATE.MUST_SHIP_DATE) AS due_date,
     PTALLOCATE.MUST_SHIP_DATE AS must_ship_date,
     PTALLOCATE.REQUEST_DATE AS request_date,
     V_SCHED_HRS_TO_GO.PROD_START_TIME AS prod_start_time,
@@ -122,52 +122,56 @@ WITH job_data AS (
   -- Material shortage: pick the largest short item per job
   LEFT OUTER JOIN (
     SELECT
-      PTORDER.WORKORDER_ID AS workorder_id,
-      ARINVT.ITEMNO AS material_item,
-      ARINVT.DESCRIP AS material_descrip,
-      SUM(COALESCE(XCPT.QTY, 0)) AS material_required_qty,
+      h.workorder_id AS workorder_id,
+      a.itemno AS material_item,
+      a.descrip AS material_descrip,
+      SUM(u.tot_mat_qty) AS material_required_qty,
       CAST(NULL AS NUMBER) AS material_issued_qty,
       SUM(
         GREATEST(
           0,
-          COALESCE(XCPT.QTY, 0)
-          - iqcapacity.left_to_recv_alloc_to_matxcpt(
-              XCPT.ARINVT_ID,
-              XCPT.DIVISION_ID,
-              XCPT.COST_OBJECT_SOURCE,
-              XCPT.COST_OBJECT_ID
-            )
-          - mat_po_xcpt.get_item_vmi_onhand(XCPT.ARINVT_ID, 2)
+          u.tot_mat_qty
+          - CASE NVL(params.capacity_consolidate_div_req, 'N')
+              WHEN 'Y' THEN a.onhand
+              ELSE NVL(div.onhand, a.onhand)
+            END
         )
       ) AS material_short_qty,
       ROW_NUMBER() OVER (
-        PARTITION BY PTORDER.WORKORDER_ID
+        PARTITION BY h.workorder_id
         ORDER BY SUM(
           GREATEST(
             0,
-            COALESCE(XCPT.QTY, 0)
-            - iqcapacity.left_to_recv_alloc_to_matxcpt(
-                XCPT.ARINVT_ID,
-                XCPT.DIVISION_ID,
-                XCPT.COST_OBJECT_SOURCE,
-                XCPT.COST_OBJECT_ID
-              )
-            - mat_po_xcpt.get_item_vmi_onhand(XCPT.ARINVT_ID, 2)
+            u.tot_mat_qty
+            - CASE NVL(params.capacity_consolidate_div_req, 'N')
+                WHEN 'Y' THEN a.onhand
+                ELSE NVL(div.onhand, a.onhand)
+              END
           )
         ) DESC,
-        ARINVT.ITEMNO
+        a.itemno
       ) AS rn
-    FROM IQMS.XCPT_MAT_REQ XCPT
-    INNER JOIN IQMS.PTORDER PTORDER
-      ON XCPT.COST_OBJECT_SOURCE = 'PTORDER'
-      AND XCPT.COST_OBJECT_ID = PTORDER.ID
-    INNER JOIN IQMS.ARINVT ARINVT
-      ON XCPT.ARINVT_ID = ARINVT.ID
-    WHERE COALESCE(XCPT.QTY, 0) > 0
+    FROM iqms.day_hrs h
+    INNER JOIN iqms.day_pts p ON h.id = p.day_hrs_id
+    INNER JOIN iqms.day_use u ON p.id = u.day_pts_id
+    INNER JOIN iqms.arinvt a ON u.arinvt_id = a.id
+    CROSS JOIN iqms.params params
+    INNER JOIN iqms.xcpt_mat_req x
+      ON u.arinvt_id = x.arinvt_id
+      AND h.prod_date >= x.must_arrive
+      AND DECODE(params.capacity_consolidate_div_req, 'Y', -1, NVL(h.division_id, 0)) = NVL(x.division_id, 0)
+    LEFT JOIN iqms.v_arinvt_division div
+      ON div.arinvt_id = u.arinvt_id
+      AND NVL(h.division_id, 0) = NVL(div.division_id, 0)
+    WHERE COALESCE(u.tot_mat_qty, 0) > 0
     GROUP BY
-      PTORDER.WORKORDER_ID,
-      ARINVT.ITEMNO,
-      ARINVT.DESCRIP
+      h.workorder_id,
+      a.itemno,
+      a.descrip,
+      CASE NVL(params.capacity_consolidate_div_req, 'N')
+        WHEN 'Y' THEN a.onhand
+        ELSE NVL(div.onhand, a.onhand)
+      END
   ) MAT_SHORT
     ON WORKORDER.ID = MAT_SHORT.workorder_id
     AND MAT_SHORT.rn = 1

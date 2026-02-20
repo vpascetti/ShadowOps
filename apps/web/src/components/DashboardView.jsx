@@ -10,6 +10,7 @@ import MaterialShortagePanel from './MaterialShortagePanel';
 import ImportSummaryPanel from './ImportSummaryPanel';
 import SectionNavBar from './SectionNavBar';
 import PlantImpactPanel from './PlantImpactPanel';
+import { getShortageInfo } from '../utils/shortage.js';
 import '../styles/DashboardView.css';
 
 // Helper function to generate reason text for job status
@@ -98,6 +99,7 @@ export default function DashboardView({
     { id: 'QtyReleased', label: 'QtyReleased', sortable: true },
     { id: 'QtyCompleted', label: 'QtyCompleted', sortable: true },
     { id: 'Progress', label: 'Progress', sortable: false },
+    { id: 'MaterialStatus', label: '📦', sortable: false },
     { id: 'Status', label: 'Status', sortable: false },
     { id: 'Reason', label: 'Reason', sortable: false },
     { id: 'Projected', label: 'Projected', sortable: false },
@@ -164,6 +166,17 @@ export default function DashboardView({
               </>
             ) : (
               '—'
+            )}
+          </div>
+        );
+      case 'MaterialStatus':
+        const shortageInfo = getShortageInfo(job, importStats);
+        return (
+          <div className="material-status-cell" title={shortageInfo.shortageFlag ? 'Material shortage flagged' : 'No material issues'}>
+            {shortageInfo.shortageFlag ? (
+              <span className="material-shortage-icon">⚠️</span>
+            ) : (
+              <span className="material-ok-icon">✓</span>
             )}
           </div>
         );
