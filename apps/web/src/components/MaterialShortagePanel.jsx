@@ -62,8 +62,9 @@ export default function MaterialShortagePanel({ jobs, importStats }) {
           }
         })
         
-        // Convert to array and sort by shortage quantity descending
+        // Convert to array, filter out non-shortages, and sort by shortage quantity descending
         const materialsArray = Object.values(aggregated)
+          .filter(mat => mat.shortage_qty > 0) // Only show actual shortages
           .sort((a, b) => b.shortage_qty - a.shortage_qty)
           .slice(0, 20) // Limit to top 20 shortages
         
@@ -191,10 +192,10 @@ export default function MaterialShortagePanel({ jobs, importStats }) {
               
               {isExpanded && (
                 <div className="material-breakdown">
-                  <h4>Material Requirements Detail (Top 20 Shortages)</h4>
+                  <h4>Materials with Shortages (Top 20)</h4>
                   {isLoading && <div className="loading-materials">Loading materials...</div>}
                   {!isLoading && details.length === 0 && (
-                    <div className="no-materials">No detailed material data available</div>
+                    <div className="no-materials">No materials currently in shortage</div>
                   )}
                   {!isLoading && details.length > 0 && (
                     <table className="materials-table">
@@ -222,12 +223,12 @@ export default function MaterialShortagePanel({ jobs, importStats }) {
                           }
                           
                           return (
-                            <tr key={`${material.item_no}-${idx}`} className={material.shortage_qty > 0 ? 'has-shortage' : ''}>
+                            <tr key={`${material.item_no}-${idx}`} className="has-shortage">
                               <td className="item-no">{material.item_no}</td>
                               <td className="material-desc" title={material.description}>{material.description || '—'}</td>
                               <td className="qty-required">{formatQty(material.qty_required)}</td>
                               <td className="qty-onhand">{formatQty(material.onhand)}</td>
-                              <td className="qty-short">{material.shortage_qty > 0 ? formatQty(material.shortage_qty) : '—'}</td>
+                              <td className="qty-short">{formatQty(material.shortage_qty)}</td>
                               <td className="prod-date">{dateRange}</td>
                             </tr>
                           )
