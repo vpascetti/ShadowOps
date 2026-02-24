@@ -11,6 +11,7 @@ import { normalizeCsvRows, HEADER_ALIASES } from './shadowops_normalizer.js'
 import { initDB, query, getTenantIdByToken, ensureDemoTenantAndToken, upsertJob, pool } from './db.js'
 import { startSnapshotService } from './snapshot-service.js'
 import { enrichJobWithPredictions, getWorkCenterAnomalies } from './forecast-enrichment.js'
+import { predictLatenessRisk, predictUpcomingBottlenecks, predictMaterialShortages } from './proactive-predictor.js'
 
 dotenv.config()
 
@@ -957,6 +958,140 @@ app.get('/api/anomalies/dashboard', async (req, res) => {
     res.json({ ok: true, anomalies: alertsByWorkCenter })
   } catch (err) {
     console.error('Error fetching anomalies dashboard:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// ============================================================================
+// PROACTIVE PREDICTIVE ENDPOINTS (Prevent issues before they happen)
+// ============================================================================
+
+// Predict jobs at risk of missing deadlines
+app.get('/api/predictions/lateness-risk', async (req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    const lookbackDays = parseInt(req.query.lookbackDays || '30', 10)
+    
+    const riskyJobs = await predictLatenessRisk(tenantId, lookbackDays)
+    
+    res.json({
+      ok: true,
+      prediction_type: 'lateness_risk',
+      timestamp: new Date().toISOString(),
+      jobs_at_risk: riskyJobs,
+      total_jobs_at_risk: riskyJobs.length,
+      critical_count: riskyJobs.filter(j => j.risk_level === 'critical').length,
+      high_count: riskyJobs.filter(j => j.risk_level === 'high').length,
+      lookback_days: lookbackDays
+    })
+  } catch (err) {
+    console.error('Error predicting lateness risk:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Predict upcoming bottlenecks (2-3 days ahead)
+app.get('/api/predictions/bottlenecks', async (req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    const lookbackDays = parseInt(req.query.lookbackDays || '30', 10)
+    const forecastDays = parseInt(req.query.forecastDays || '3', 10)
+    
+    const bottlenecks = await predictUpcomingBottlenecks(tenantId, lookbackDays, forecastDays)
+    
+    res.json({
+      ok: true,
+      prediction_type: 'bottleneck',
+      timestamp: new Date().toISOString(),
+      bottlenecks: bottlenecks,
+      total_at_risk: bottlenecks.length,
+      critical_count: bottlenecks.filter(b => b.risk_level === 'critical').length,
+      high_count: bottlenecks.filter(b => b.risk_level === 'high').length,
+      forecast_days: forecastDays,
+      lookback_days: lookbackDays
+    })
+  } catch (err) {
+    console.error('Error predicting bottlenecks:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Predict material shortage risks
+app.get('/api/predictions/material-shortage', async (req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    const lookbackDays = parseInt(req.query.lookbackDays || '30', 10)
+    
+    const shortages = await predictMaterialShortages(tenantId, lookbackDays)
+    
+    res.json({
+      ok: true,
+      prediction_type: 'material_shortage',
+      timestamp: new Date().toISOString(),
+      jobs_at_risk: shortages,
+      total_jobs_at_risk: shortages.length,
+      critical_count: shortages.filter(s => s.risk_level === 'critical').length,
+      high_count: shortages.filter(s => s.risk_level === 'high').length,
+      lookback_days: lookbackDays
+    })
+  } catch (err) {
+    console.error('Error predicting material shortages:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Get all predictions summary (dashboard view)
+app.get('/api/predictions/summary', async (req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    const lookbackDays = parseInt(req.query.lookbackDays || '30', 10)
+    const forecastDays = parseInt(req.query.forecastDays || '3', 10)
+    
+    const [latenessRisks, bottlenecks, materialShortages] = await Promise.all([
+      predictLatenessRisk(tenantId, lookbackDays),
+      predictUpcomingBottlenecks(tenantId, lookbackDays, forecastDays),
+      predictMaterialShortages(tenantId, lookbackDays)
+    ])
+    
+    // Find critical, high-risk items
+    const criticalLateJobs = latenessRisks.filter(j => j.risk_level === 'critical')
+    const criticalBottlenecks = bottlenecks.filter(b => b.risk_level === 'critical')
+    const criticalShortages = materialShortages.filter(s => s.risk_level === 'critical')
+    
+    res.json({
+      ok: true,
+      prediction_type: 'summary',
+      timestamp: new Date().toISOString(),
+      summary: {
+        total_predictions: latenessRisks.length + bottlenecks.length + materialShortages.length,
+        critical_items: criticalLateJobs.length + criticalBottlenecks.length + criticalShortages.length,
+        lateness_risk: {
+          total: latenessRisks.length,
+          critical: criticalLateJobs.length,
+          high: latenessRisks.filter(j => j.risk_level === 'high').length,
+          top_job: latenessRisks[0] || null
+        },
+        bottleneck_risk: {
+          total: bottlenecks.length,
+          critical: criticalBottlenecks.length,
+          high: bottlenecks.filter(b => b.risk_level === 'high').length,
+          top_wc: bottlenecks[0] || null
+        },
+        material_shortage_risk: {
+          total: materialShortages.length,
+          critical: criticalShortages.length,
+          high: materialShortages.filter(s => s.risk_level === 'high').length,
+          top_job: materialShortages[0] || null
+        }
+      },
+      details: {
+        lateness_jobs: latenessRisks,
+        bottlenecks: bottlenecks,
+        material_shortages: materialShortages
+      }
+    })
+  } catch (err) {
+    console.error('Error generating predictions summary:', err)
     res.status(500).json({ ok: false, error: err.message })
   }
 })

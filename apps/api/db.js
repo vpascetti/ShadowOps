@@ -159,6 +159,21 @@ async function initDB() {
       );
     `);
 
+    // Machine learning training data (for predictive model training)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS prediction_training_data (
+        id SERIAL PRIMARY KEY,
+        tenant_id INTEGER REFERENCES tenants(id),
+        job_id INTEGER NOT NULL,
+        prediction_type TEXT NOT NULL,
+        prediction_data JSONB,
+        outcome JSONB,
+        outcome_date TIMESTAMP,
+        created_at TIMESTAMP DEFAULT now(),
+        UNIQUE (tenant_id, job_id, prediction_type, outcome_date)
+      );
+    `);
+
     // Inventory table for tracking parts and thresholds (unchanged)
     await client.query(`
       CREATE TABLE IF NOT EXISTS inventory (
