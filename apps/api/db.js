@@ -174,6 +174,37 @@ async function initDB() {
       );
     `);
 
+    // Shipping data (for on-time delivery tracking and analytics)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS shipments (
+        id SERIAL PRIMARY KEY,
+        tenant_id INTEGER REFERENCES tenants(id),
+        workorder_id INTEGER NOT NULL,
+        job_id INTEGER NOT NULL,
+        item_number TEXT,
+        description TEXT,
+        customer_id TEXT,
+        customer_name TEXT,
+        qty_ordered NUMERIC,
+        qty_shipped NUMERIC,
+        actual_ship_date TIMESTAMP,
+        promised_date TIMESTAMP,
+        work_order_closed_date TIMESTAMP,
+        tracking_number TEXT,
+        shipping_carrier TEXT,
+        actual_delivery_date TIMESTAMP,
+        delivery_signature BOOLEAN,
+        delivery_status TEXT,
+        days_late_or_early INTEGER,
+        shipping_notes TEXT,
+        po_number TEXT,
+        source TEXT DEFAULT 'iqms',
+        created_at TIMESTAMP DEFAULT now(),
+        updated_at TIMESTAMP DEFAULT now(),
+        UNIQUE (tenant_id, workorder_id)
+      );
+    `);
+
     // Inventory table for tracking parts and thresholds (unchanged)
     await client.query(`
       CREATE TABLE IF NOT EXISTS inventory (

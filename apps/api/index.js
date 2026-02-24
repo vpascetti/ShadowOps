@@ -12,6 +12,15 @@ import { initDB, query, getTenantIdByToken, ensureDemoTenantAndToken, upsertJob,
 import { startSnapshotService } from './snapshot-service.js'
 import { enrichJobWithPredictions, getWorkCenterAnomalies } from './forecast-enrichment.js'
 import { predictLatenessRisk, predictUpcomingBottlenecks, predictMaterialShortages } from './proactive-predictor.js'
+import { 
+  syncShippingDataFromIQMS, 
+  getOnTimeDeliveryMetrics, 
+  getLateShipments, 
+  getShippingStatusByCustomer, 
+  getJobShipments, 
+  getShippingAnomalies, 
+  getShippingForecast 
+} from './shipping-service.js'
 
 dotenv.config()
 
@@ -1092,6 +1101,159 @@ app.get('/api/predictions/summary', async (req, res) => {
     })
   } catch (err) {
     console.error('Error generating predictions summary:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// ============================================================================
+// SHIPPING DATA ENDPOINTS (On-time delivery tracking and supply chain visibility)
+// ============================================================================
+
+// Sync shipping data from IQMS
+app.post('/api/shipping/sync', async (req, res) => {
+  try {
+    if (!IQMS_ENABLED) {
+      return res.status(503).json({
+        ok: false,
+        error: 'IQMS not configured',
+        message: 'Shipping sync requires IQMS connection'
+      })
+    }
+
+    const { tenantId } = await ensureDemoTenantAndToken()
+    
+    const result = await syncShippingDataFromIQMS(tenantId, queryIQMS)
+    
+    res.json({
+      ok: true,
+      message: `Synced ${result.synced} shipments`,
+      synced: result.synced,
+      error: result.error,
+      timestamp: new Date().toISOString()
+    })
+  } catch (err) {
+    console.error('Error syncing shipping data:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Get on-time delivery metrics
+app.get('/api/shipping/metrics', async (req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    const daysBack = parseInt(req.query.daysBack || '90', 10)
+    
+    const metrics = await getOnTimeDeliveryMetrics(tenantId, daysBack)
+    
+    res.json({
+      ok: true,
+      metrics: metrics,
+      recommendation: metrics.on_time_delivery_percent < 90 ?
+        'On-time delivery below target. Review shipping delays and carrier performance.' :
+        'On-time delivery performing well.'
+    })
+  } catch (err) {
+    console.error('Error fetching shipping metrics:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Get late shipments
+app.get('/api/shipping/late', async (req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    const daysBack = parseInt(req.query.daysBack || '30', 10)
+    
+    const lateShipments = await getLateShipments(tenantId, daysBack)
+    
+    res.json({
+      ok: true,
+      late_shipments: lateShipments,
+      count: lateShipments.length,
+      daysBack: daysBack
+    })
+  } catch (err) {
+    console.error('Error fetching late shipments:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Get shipping status by customer
+app.get('/api/shipping/by-customer', async (req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    const daysBack = parseInt(req.query.daysBack || '90', 10)
+    
+    const customerStatus = await getShippingStatusByCustomer(tenantId, daysBack)
+    
+    res.json({
+      ok: true,
+      customers: customerStatus,
+      count: customerStatus.length,
+      daysBack: daysBack
+    })
+  } catch (err) {
+    console.error('Error fetching customer shipping status:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Get shipments for a specific job
+app.get('/api/jobs/:jobId/shipments', async (req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    const { jobId } = req.params
+    
+    const shipments = await getJobShipments(tenantId, parseInt(jobId, 10))
+    
+    res.json({
+      ok: true,
+      job_id: jobId,
+      shipments: shipments,
+      count: shipments.length
+    })
+  } catch (err) {
+    console.error(`Error fetching shipments for job ${req.params.jobId}:`, err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Get shipping anomalies
+app.get('/api/shipping/anomalies', async (req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    const daysBack = parseInt(req.query.daysBack || '30', 10)
+    
+    const anomalies = await getShippingAnomalies(tenantId, daysBack)
+    
+    res.json({
+      ok: true,
+      anomalies: anomalies,
+      count: anomalies.length,
+      daysBack: daysBack,
+      alert_level: anomalies.some(a => a.severity === 'critical') ? 'critical' :
+                   anomalies.some(a => a.severity === 'high') ? 'high' : 'normal'
+    })
+  } catch (err) {
+    console.error('Error fetching shipping anomalies:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Get shipping forecast
+app.get('/api/shipping/forecast', async (req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    const daysAhead = parseInt(req.query.daysAhead || '7', 10)
+    
+    const forecast = await getShippingForecast(tenantId, daysAhead)
+    
+    res.json({
+      ok: true,
+      forecast: forecast
+    })
+  } catch (err) {
+    console.error('Error generating shipping forecast:', err)
     res.status(500).json({ ok: false, error: err.message })
   }
 })
