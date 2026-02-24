@@ -29,6 +29,13 @@ cp ../tsconfig.base.json .
 cp -r ../apps/api/package.json apps/api/
 cp -r ../apps/api/src apps/api/ 2>/dev/null || true
 cp -r ../apps/api/tsconfig.json apps/api/
+cp -r ../apps/api/sql apps/api/ 2>/dev/null || true
+# Copy critical service files
+cp ../apps/api/shipping-service.js apps/api/ 2>/dev/null || true
+cp ../apps/api/proactive-predictor.js apps/api/ 2>/dev/null || true
+cp ../apps/api/db.js apps/api/ 2>/dev/null || true
+cp ../apps/api/index.js apps/api/ 2>/dev/null || true
+cp ../apps/api/iqms_importer.js apps/api/ 2>/dev/null || true
 cp -r ../apps/web/package.json apps/web/
 cp -r ../apps/web/src apps/web/ 2>/dev/null || true
 cp -r ../apps/web/tsconfig.json apps/web/
@@ -53,6 +60,9 @@ cp ../.gitignore . 2>/dev/null || true
 cp ../PILOT_SETUP.md README.md
 cp ../PILOT_PITCH.md ./PILOT_PITCH.md 2>/dev/null || true
 cp ../DEMO_GUIDE.md ./DEMO_GUIDE.md 2>/dev/null || true
+cp ../SHIPPING_DATA_GUIDE.md ./SHIPPING_DATA_GUIDE.md 2>/dev/null || true
+cp ../PROACTIVE_PREDICTIONS_GUIDE.md ./PROACTIVE_PREDICTIONS_GUIDE.md 2>/dev/null || true
+cp ../APP_SECURITY_CHECKLIST.md ./APP_SECURITY_CHECKLIST.md 2>/dev/null || true
 
 # Copy interactive setup scripts
 cp ../pilot-start.sh start.sh
