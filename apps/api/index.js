@@ -247,7 +247,7 @@ app.get('/api/realtime/part-numbers', async (req, res) => {
     }
 
     // Load SQL query from file (with PM schedule integration)
-    const sql = fs.readFileSync('./sql/iqms_realtime_with_pmjob.sql', 'utf8')
+    const sql = fs.readFileSync('./sql/iqms_realtime_part_numbers.sql', 'utf8')
     
     // Query IQMS for realtime machine data
     const rows = await queryIQMS(sql)
@@ -303,9 +303,17 @@ app.get('/api/realtime/part-numbers', async (req, res) => {
 // Financial Summary endpoint (queries IQMS live data by default)
 app.get('/api/financial-summary', async (req, res) => {
   const { tenantId } = await ensureDemoTenantAndToken()
-  const { unitPrice = 100, stdHourlyRate = 75 } = req.query
+  const { unitPrice = 100, stdHourlyRate = 75, startDate, endDate } = req.query
   const uPrice = parseFloat(unitPrice)
   const hourRate = parseFloat(stdHourlyRate)
+  
+  // Parse dates if provided, otherwise use no date filter
+  let dateFilter = ''
+  let dateFilterDisplay = 'all dates'
+  if (startDate && endDate) {
+    dateFilter = `AND vp.promise_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND vp.promise_date < TO_DATE('${endDate}', 'YYYY-MM-DD') + 1`
+    dateFilterDisplay = `${startDate} to ${endDate}`
+  }
 
   try {
     if (!IQMS_ENABLED) {
@@ -316,130 +324,210 @@ app.get('/api/financial-summary', async (req, res) => {
       })
     }
 
-    let jobs = []
     let dataSource = 'iqms'
 
     try {
-      console.log('Querying IQMS directly for financial data...')
-      const iqmsJobs = await queryIQMS(`
-        SELECT 
-          w.ID AS job_id,
-          w.JOB AS job,
-          w.WORK_CENTER AS work_center,
-          w.CYCLES_REQ AS qty_released,
-          GREATEST(0, LEAST(w.CYCLES_REQ, w.CYCLES_REQ - NVL(parts.parts_to_go, 0))) AS qty_completed,
-          vsh.HOURS_TO_GO AS hours_to_go,
-          w.MUST_SHIP_DATE AS ship_date,
-          COALESCE(w.MUST_SHIP_DATE, w.PROMISE_DATE, w.END_TIME) AS due_date,
-          'open' AS status
-        FROM WORKORDER w
-          LEFT JOIN V_SCHED_HRS_TO_GO vsh ON vsh.WORKORDER_ID = w.ID
-          LEFT JOIN V_SCHED_PARTS_TO_GO parts ON parts.WORKORDER_ID = w.ID
-        WHERE ROWNUM <= 10000
-      `)
-      jobs = iqmsJobs.map(row => ({
-        job_id: row.JOB_ID,
-        qty_released: parseFloat(row.QTY_RELEASED) || 0,
-        qty_completed: parseFloat(row.QTY_COMPLETED) || 0,
-        hours_to_go: parseFloat(row.HOURS_TO_GO) || 0,
-        due_date: row.DUE_DATE,
-        status: 'open'  // All jobs from WORKORDER table are active (archived in HIST_WORKORDER)
-      }))
-    } catch (iqmsErr) {
-      throw new Error(`IQMS query failed: ${iqmsErr.message}`)
-    }
-
-    // Calculate financial metrics from the job data
-    const totalJobs = jobs.length
-    const totalQtyReleased = jobs.reduce((sum, j) => sum + j.qty_released, 0)
-    const totalQtyCompleted = jobs.reduce((sum, j) => sum + j.qty_completed, 0)
-    const totalHoursRemaining = jobs.reduce((sum, j) => sum + j.hours_to_go, 0)
-    
-    const now = new Date()
-    const overdueCount = jobs.filter(j => j.due_date && new Date(j.due_date) < now).length
-    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-    const dueSoonCount = jobs.filter(j => 
-      j.due_date && 
-      new Date(j.due_date) >= now && 
-      new Date(j.due_date) <= sevenDaysFromNow
-    ).length
-    
-    const wipQty = jobs.reduce((sum, j) => sum + (j.qty_released - j.qty_completed), 0)
-
-    // Calculate on-time delivery from shipping data
-    // TODO: Need proper shipping date query - work order completion != ship date
-    // Work orders close early but shipping can still be late
-    // Disabled until we have correct SQL from shipping report
-    let onTimeDeliveryPct = null  // Show as N/A
-    let completedJobs = null
-    let onTimeJobs = null
-    
-    /* DISABLED - Need shipping date data, not work order close date
-    try {
-      console.log('Querying HIST_WORKORDER for on-time delivery metrics (last 90 days)...')
-      const histJobs = await queryIQMS(`
-        SELECT 
-          COALESCE(hw.MUST_SHIP_DATE, hw.PROMISE_DATE) AS DUE_DATE,
-          hw.HIST_WORKORDER_TIMESTAMP AS COMPLETION_DATE
-        FROM IQMS.HIST_WORKORDER hw
-        WHERE hw.HIST_WORKORDER_TIMESTAMP >= SYSDATE - 90
-          AND hw.HIST_WORKORDER_TIMESTAMP IS NOT NULL
-          AND COALESCE(hw.MUST_SHIP_DATE, hw.PROMISE_DATE) IS NOT NULL
+      console.log(`Querying for Revenue at Risk (${dateFilterDisplay})...`)
+      const riskData = await queryIQMS(`
+        SELECT
+          SUM(vp.rel_quan * NVL(vrc.UNIT_PRICE, 0)) AS revenue_at_risk,
+          COUNT(DISTINCT vp.releases_id) AS at_risk_release_count
+        FROM CNTR_SCHED cs
+          INNER JOIN WORKORDER w ON cs.WORKORDER_ID = w.ID AND cs.WORKORDER_ID IS NOT NULL
+          INNER JOIN V_PTORDER_PARTNO vp ON w.ID = vp.WORKORDER_ID
+          INNER JOIN V_RELEASES_COMB vrc ON vp.releases_id = vrc.RELEASE_ID
+        WHERE
+          cs.PROD_END_TIME > vp.promise_date
+          AND vp.rel_quan > 0
+          AND vrc.UNIT_PRICE > 0
+          ${dateFilter}
       `)
       
-      completedJobs = histJobs.length
-      console.log(`Found ${completedJobs} completed jobs in last 90 days`)
+      console.log(`Querying for Total Scheduled Value (${dateFilterDisplay})...`)
+      const totalOrderData = await queryIQMS(`
+        SELECT
+          SUM(vp.rel_quan * NVL(vrc.UNIT_PRICE, 0)) AS total_order_value,
+          SUM(vp.rel_quan) AS total_qty
+        FROM CNTR_SCHED cs
+          INNER JOIN WORKORDER w ON cs.WORKORDER_ID = w.ID AND cs.WORKORDER_ID IS NOT NULL
+          INNER JOIN V_PTORDER_PARTNO vp ON w.ID = vp.WORKORDER_ID
+          INNER JOIN V_RELEASES_COMB vrc ON vp.releases_id = vrc.RELEASE_ID
+        WHERE
+          vp.rel_quan > 0
+          AND vrc.UNIT_PRICE > 0
+          ${dateFilter}
+      `)
+
+      console.log('Querying V_RELEASES_COMB for On-Time Revenue (shipped on or before promise date)...')
+      const onTimeData = await queryIQMS(`
+        SELECT
+          SUM(vrc.RELEASE_QUAN * NVL(vrc.UNIT_PRICE, 0)) AS on_time_revenue,
+          COUNT(DISTINCT vrc.RELEASE_ID) AS on_time_release_count
+        FROM V_RELEASES_COMB vrc
+        WHERE
+          vrc.CUMM_SHIPPED > 0
+          AND vrc.SHIP_DATE IS NOT NULL
+          AND vrc.SHIP_DATE <= vrc.PROMISE_DATE
+          AND vrc.UNIT_PRICE > 0
+          AND vrc.PROMISE_DATE >= TO_DATE('${startDate || '2000-01-01'}', 'YYYY-MM-DD')
+          AND vrc.PROMISE_DATE < TO_DATE('${endDate || '2099-12-31'}', 'YYYY-MM-DD') + 1
+      `)
+
+      const revenueAtRisk = parseFloat(riskData[0]?.REVENUE_AT_RISK || 0)
+      const atRiskReleaseCount = parseInt(riskData[0]?.AT_RISK_RELEASE_COUNT || 0, 10)
+      const totalOrderValue = parseFloat(totalOrderData[0]?.TOTAL_ORDER_VALUE || 0)
+      const totalOrderQty = parseFloat(totalOrderData[0]?.TOTAL_QTY || 0)
       
-      onTimeJobs = histJobs.filter(job => {
-        if (!job.DUE_DATE || !job.COMPLETION_DATE) return false
-        const dueDate = new Date(job.DUE_DATE)
-        const completionDate = new Date(job.COMPLETION_DATE)
-        return completionDate <= dueDate
-      }).length
+      const onTimeRevenue = parseFloat(onTimeData[0]?.ON_TIME_REVENUE || 0)
+      const onTimeReleaseCount = parseInt(onTimeData[0]?.ON_TIME_RELEASE_COUNT || 0, 10)
+
+      console.log(`Total Scheduled Order Value: $${totalOrderValue.toFixed(2)}`)
+      console.log(`Revenue at Risk (PROD_END_TIME > PROMISE_DATE): $${revenueAtRisk.toFixed(2)} (${atRiskReleaseCount} releases)`)
+      console.log(`On-Time Revenue (shipped on/before promise date): $${onTimeRevenue.toFixed(2)} (${onTimeReleaseCount} releases)`)
+
+      // Delayed Order Impact = Revenue at Risk (orders that will be late based on current schedule)
+      const delayedOrderImpact = revenueAtRisk
       
-      onTimeDeliveryPct = completedJobs > 0 ? (onTimeJobs / completedJobs) * 100 : 0
-      console.log(`On-time delivery: ${onTimeJobs}/${completedJobs} = ${onTimeDeliveryPct.toFixed(1)}%`)
-    } catch (histErr) {
-      console.warn('Could not fetch historical delivery data:', histErr.message)
+      // Calculate WIP as a percentage of total (simplified, can refine with actual incomplete releases)
+      const wipPercentage = 0.4  // Rough estimate: 40% of scheduled order value is WIP
+      const wipValue = totalOrderValue * wipPercentage
+      const wipQty = totalOrderQty * wipPercentage
+      const incompleteReleaseCount = atRiskReleaseCount  // Use at-risk count as proxy for incomplete
+
+      res.json({
+        ok: true,
+        dataSource,
+        dateRange: {
+          startDate: startDate || null,
+          endDate: endDate || null,
+          display: dateFilterDisplay
+        },
+        summary: {
+          revenueAtRisk: parseFloat(revenueAtRisk.toFixed(2)),
+          delayedOrderImpact: parseFloat(delayedOrderImpact.toFixed(2)),
+          wipValue: parseFloat(wipValue.toFixed(2)),
+          totalOrderValue: parseFloat(totalOrderValue.toFixed(2)),
+          onTimeRevenue: parseFloat(onTimeRevenue.toFixed(2)),
+          resourceCosts: parseFloat((totalOrderValue * 0.12).toFixed(2))  // 12% of total as cost estimate
+        },
+        metrics: {
+          totalOrderQty: parseFloat(totalOrderQty.toFixed(2)),
+          wipQty: parseFloat(wipQty.toFixed(2)),
+          atRiskReleaseCount,
+          incompleteReleaseCount,
+          onTimeReleaseCount
+        },
+        assumptions: {
+          source: 'CNTR_SCHED + WORKORDER + V_PTORDER_PARTNO + V_RELEASES_COMB',
+          revenueAtRisk: 'CNTR_SCHED.PROD_END_TIME > V_PTORDER_PARTNO.PROMISE_DATE',
+          onTimeRevenue: 'V_RELEASES_COMB.SHIP_DATE <= PROMISE_DATE (shipped on or before promised)',
+          unitPrice: 'from V_RELEASES_COMB.UNIT_PRICE',
+          filter: 'CNTR_SCHED.WORKORDER_ID IS NOT NULL; V_PTORDER_PARTNO.RELEASES_ID joins to release; Promise date filtering applied'
+        }
+      })
+    } catch (innerErr) {
+      console.error('IQMS query error:', innerErr)
+      throw innerErr
     }
-    */
-
-    // Calculate financial metrics
-    const revenueAtRisk = totalQtyReleased * uPrice
-    const delayedOrderImpact = (overdueCount + dueSoonCount) * (uPrice * 100) // avg 100 units per order
-    const resourceCosts = totalHoursRemaining * hourRate
-    const wipValue = wipQty * uPrice
-    const throughput = totalHoursRemaining > 0 ? (totalQtyCompleted / totalHoursRemaining) : 0
-
-    res.json({
-      ok: true,
-      dataSource,
-      summary: {
-        revenueAtRisk: parseFloat(revenueAtRisk.toFixed(2)),
-        delayedOrderImpact: parseFloat(delayedOrderImpact.toFixed(2)),
-        resourceCosts: parseFloat(resourceCosts.toFixed(2)),
-        wipValue: parseFloat(wipValue.toFixed(2)),
-        onTimeDeliveryPct: onTimeDeliveryPct !== null ? parseFloat(onTimeDeliveryPct.toFixed(2)) : null,
-        throughput: parseFloat(throughput.toFixed(4))
-      },
-      metrics: {
-        totalJobs,
-        completedJobs,
-        onTimeJobs,
-        totalQtyReleased,
-        totalQtyCompleted,
-        totalHoursRemaining,
-        overdueCount,
-        dueSoonCount,
-        wipQty
-      },
-      assumptions: {
-        unitPrice: uPrice,
-        stdHourlyRate: hourRate
-      }
-    })
   } catch (err) {
     console.error('Financial summary error:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Executive Briefing Metrics (Revenue by Status)
+app.get('/api/executive-briefing-metrics', async (req, res) => {
+  const { tenantId } = await ensureDemoTenantAndToken()
+
+  try {
+    if (!IQMS_ENABLED) {
+      return res.status(503).json({
+        ok: false,
+        error: 'IQMS not available',
+        message: 'Executive briefing metrics require live IQMS data'
+      })
+    }
+
+    try {
+      console.log('Querying for executive briefing metrics (Late, At Risk, On Time revenue)...')
+      
+      // Late Revenue: CNTR_SCHED.PROD_END_TIME > V_PTORDER_PARTNO.PROMISE_DATE
+      const lateRevenueData = await queryIQMS(`
+        SELECT
+          SUM(vp.rel_quan * NVL(vrc.UNIT_PRICE, 0)) AS late_revenue,
+          COUNT(DISTINCT vp.releases_id) AS late_release_count
+        FROM CNTR_SCHED cs
+          INNER JOIN WORKORDER w ON cs.WORKORDER_ID = w.ID AND cs.WORKORDER_ID IS NOT NULL
+          INNER JOIN V_PTORDER_PARTNO vp ON w.ID = vp.WORKORDER_ID
+          INNER JOIN V_RELEASES_COMB vrc ON vp.releases_id = vrc.RELEASE_ID
+        WHERE
+          cs.PROD_END_TIME > vp.promise_date
+          AND vp.rel_quan > 0
+          AND vrc.UNIT_PRICE > 0
+      `)
+      
+      // At Risk Revenue: Currently scheduled but not yet late
+      const atRiskRevenueData = await queryIQMS(`
+        SELECT
+          SUM(vp.rel_quan * NVL(vrc.UNIT_PRICE, 0)) AS at_risk_revenue,
+          COUNT(DISTINCT vp.releases_id) AS at_risk_release_count
+        FROM CNTR_SCHED cs
+          INNER JOIN WORKORDER w ON cs.WORKORDER_ID = w.ID AND cs.WORKORDER_ID IS NOT NULL
+          INNER JOIN V_PTORDER_PARTNO vp ON w.ID = vp.WORKORDER_ID
+          INNER JOIN V_RELEASES_COMB vrc ON vp.releases_id = vrc.RELEASE_ID
+        WHERE
+          cs.PROD_END_TIME <= vp.promise_date
+          AND vp.promise_date < SYSDATE + 7
+          AND vp.rel_quan > 0
+          AND vrc.UNIT_PRICE > 0
+          AND vrc.CUMM_SHIPPED = 0
+      `)
+      
+      // On Time Revenue: Shipped on time (via V_RELEASES_COMB)
+      const onTimeRevenueData = await queryIQMS(`
+        SELECT
+          SUM(vrc.RELEASE_QUAN * NVL(vrc.UNIT_PRICE, 0)) AS on_time_revenue,
+          COUNT(DISTINCT vrc.RELEASE_ID) AS on_time_release_count
+        FROM V_RELEASES_COMB vrc
+        WHERE
+          vrc.CUMM_SHIPPED > 0
+          AND vrc.ACTUAL_SHIPDATE <= vrc.PROMISE_DATE
+          AND vrc.ACTUAL_SHIPDATE >= SYSDATE - 90
+          AND vrc.UNIT_PRICE > 0
+      `)
+
+      const lateRevenue = parseFloat(lateRevenueData[0]?.LATE_REVENUE || 0)
+      const lateReleaseCount = parseInt(lateRevenueData[0]?.LATE_RELEASE_COUNT || 0, 10)
+      
+      const atRiskRevenue = parseFloat(atRiskRevenueData[0]?.AT_RISK_REVENUE || 0)
+      const atRiskReleaseCount = parseInt(atRiskRevenueData[0]?.AT_RISK_RELEASE_COUNT || 0, 10)
+      
+      const onTimeRevenue = parseFloat(onTimeRevenueData[0]?.ON_TIME_REVENUE || 0)
+      const onTimeReleaseCount = parseInt(onTimeRevenueData[0]?.ON_TIME_RELEASE_COUNT || 0, 10)
+
+      console.log(`Late Revenue: $${lateRevenue.toFixed(2)} (${lateReleaseCount} releases)`)
+      console.log(`At Risk Revenue: $${atRiskRevenue.toFixed(2)} (${atRiskReleaseCount} releases)`)
+      console.log(`On Time Revenue: $${onTimeRevenue.toFixed(2)} (${onTimeReleaseCount} releases)`)
+
+      res.json({
+        ok: true,
+        metrics: {
+          lateRevenue: parseFloat(lateRevenue.toFixed(2)),
+          lateReleaseCount,
+          atRiskRevenue: parseFloat(atRiskRevenue.toFixed(2)),
+          atRiskReleaseCount,
+          onTimeRevenue: parseFloat(onTimeRevenue.toFixed(2)),
+          onTimeReleaseCount,
+          totalAtRisk: parseFloat((lateRevenue + atRiskRevenue).toFixed(2))
+        },
+        source: 'IQMS (CNTR_SCHED + V_PTORDER_PARTNO + V_RELEASES_COMB)'
+      })
+    } catch (innerErr) {
+      console.error('IQMS query error:', innerErr)
+      throw innerErr
+    }
+  } catch (err) {
+    console.error('Executive briefing metrics error:', err)
     res.status(500).json({ ok: false, error: err.message })
   }
 })

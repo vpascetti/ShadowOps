@@ -5,11 +5,68 @@ export default function FinancialSummary() {
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const fetchSummary = async () => {
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
+  const getDatePreset = (preset) => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    
+    switch (preset) {
+      case 'thisMonth':
+        return {
+          start: `${year}-${month}-01`,
+          end: `${year}-${month}-${new Date(year, month, 0).getDate()}`
+        }
+      case 'lastMonth':
+        const lastMonthDate = new Date(year, month - 2, 1)
+        const lmYear = lastMonthDate.getFullYear()
+        const lmMonth = String(lastMonthDate.getMonth() + 1).padStart(2, '0')
+        const lastDay = new Date(lmYear, lmMonth, 0).getDate()
+        return {
+          start: `${lmYear}-${lmMonth}-01`,
+          end: `${lmYear}-${lmMonth}-${lastDay}`
+        }
+      case 'nextMonth':
+        const nextMonthDate = new Date(year, month, 1)
+        const nmYear = nextMonthDate.getFullYear()
+        const nmMonth = String(nextMonthDate.getMonth() + 1).padStart(2, '0')
+        const nmLastDay = new Date(nmYear, nmMonth, 0).getDate()
+        return {
+          start: `${nmYear}-${nmMonth}-01`,
+          end: `${nmYear}-${nmMonth}-${nmLastDay}`
+        }
+      case 'last30':
+        const d30 = new Date(today)
+        d30.setDate(d30.getDate() - 30)
+        return {
+          start: `${d30.getFullYear()}-${String(d30.getMonth() + 1).padStart(2, '0')}-${String(d30.getDate()).padStart(2, '0')}`,
+          end: `${year}-${month}-${day}`
+        }
+      default:
+        return { start: '', end: '' }
+    }
+  }
+
+  const applyPreset = (preset) => {
+    const { start, end } = getDatePreset(preset)
+    setStartDate(start)
+    setEndDate(end)
+    // Call fetchSummary with the new dates directly
+    fetchSummary(start, end)
+  }
+
+  const fetchSummary = async (sd = startDate, ed = endDate) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/financial-summary')
+      let url = '/financial-summary'
+      if (sd && ed) {
+        url += `?startDate=${sd}&endDate=${ed}`
+      }
+      const res = await fetch(url)
       const data = await res.json()
       if (!data.ok) throw new Error(data.error || 'Failed to fetch financial summary')
       setSummary(data)
@@ -41,10 +98,77 @@ export default function FinancialSummary() {
   if (error) return <div className="financial__error">Error: {error}</div>
   if (!summary) return <div className="financial__empty">No financial data available</div>
 
-  const { summary: fin, metrics } = summary
+  const { summary: fin, metrics, dateRange } = summary
 
   return (
     <div className="financial">
+      {/* Date Range Filter */}
+      <section className="financial__filters">
+        <div className="filters__header">
+          <h3>Filter by Promise Date Range</h3>
+          {dateRange?.display && <span className="filters__current">Viewing: {dateRange.display}</span>}
+        </div>
+        
+        <div className="filters__presets">
+          <button 
+            className="preset__btn" 
+            onClick={() => applyPreset('thisMonth')}
+          >
+            This Month
+          </button>
+          <button 
+            className="preset__btn" 
+            onClick={() => applyPreset('lastMonth')}
+          >
+            Last Month
+          </button>
+          <button 
+            className="preset__btn" 
+            onClick={() => applyPreset('nextMonth')}
+          >
+            Next Month
+          </button>
+          <button 
+            className="preset__btn" 
+            onClick={() => applyPreset('last30')}
+          >
+            Last 30 Days
+          </button>
+        </div>
+
+        <div className="filters__inputs">
+          <div className="input__group">
+            <label htmlFor="start-date">Start Date:</label>
+            <input 
+              id="start-date"
+              type="date" 
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+          <div className="input__group">
+            <label htmlFor="end-date">End Date:</label>
+            <input 
+              id="end-date"
+              type="date" 
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+          <button 
+            className="filters__apply"
+            onClick={() => fetchSummary(startDate, endDate)}
+          >
+            Apply Filter
+          </button>
+          <button 
+            className="filters__clear"
+            onClick={() => { setStartDate(''); setEndDate(''); fetchSummary('', '') }}
+          >
+            Clear
+          </button>
+        </div>
+      </section>
       <section className="financial__grid">
         <article className="financial__card financial__card--risk">
           <div className="card__icon"></div>
@@ -84,21 +208,12 @@ export default function FinancialSummary() {
 
         <article className="financial__card financial__card--ontime">
           <div className="card__icon"></div>
-          <p className="card__label">On-Time Delivery Rate (90d)</p>
-          <p className="card__value">{fin.onTimeDeliveryPct !== null ? formatPercent(fin.onTimeDeliveryPct) : 'N/A'}</p>
+          <p className="card__label">On-Time Revenue</p>
+          <p className="card__value">{fin.onTimeRevenue !== null ? formatCurrency(fin.onTimeRevenue) : 'N/A'}</p>
           <p className="card__detail">
-            {metrics.onTimeJobs && metrics.completedJobs 
-              ? `${metrics.onTimeJobs} of ${metrics.completedJobs} jobs on-time`
-              : 'Pending shipping data integration'}
-          </p>
-        </article>
-
-        <article className="financial__card financial__card--throughput">
-          <div className="card__icon"></div>
-          <p className="card__label">At-Risk Jobs</p>
-          <p className="card__value">{metrics.atRiskCount}</p>
-          <p className="card__detail">
-            Risk score ≥ 70
+            {metrics.onTimeReleaseCount 
+              ? `${metrics.onTimeReleaseCount} releases shipped on time`
+              : 'Pending shipping data'}
           </p>
         </article>
       </section>

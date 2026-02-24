@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import MetricCard from './MetricCard'
 import { getShortageInfo, datasetHasShortageSignals } from '../utils/shortage.js'
 // CENTRALIZED METRICS - Use only centralized calculations
@@ -168,6 +168,27 @@ function statusClass(status) {
 
 export default function ExecutiveBriefing({ asOfDate, metrics = {}, jobs = [], loadSummary = [], importStats, dataSource }) {
   const { total = 0, late = 0, projectedLate = 0, atRisk = 0 } = metrics || {}
+  const [iqmsRevenueMetrics, setIqmsRevenueMetrics] = useState(null)
+  const [loadingMetrics, setLoadingMetrics] = useState(true)
+
+  // Fetch IQMS-based revenue metrics
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        setLoadingMetrics(true)
+        const res = await fetch('/executive-briefing-metrics')
+        const data = await res.json()
+        if (data.ok) {
+          setIqmsRevenueMetrics(data.metrics)
+        }
+      } catch (err) {
+        console.error('Failed to fetch IQMS revenue metrics:', err)
+      } finally {
+        setLoadingMetrics(false)
+      }
+    }
+    fetchMetrics()
+  }, [])
   const sourceLabel = importStats?.source || (dataSource === 'API' ? 'Local API' : 'CSV snapshot')
   const snapshotLabel = importStats?.snapshotTimestamp ? new Date(importStats.snapshotTimestamp) : asOfDate
   const riskList = topRisks(jobs)
@@ -287,9 +308,21 @@ export default function ExecutiveBriefing({ asOfDate, metrics = {}, jobs = [], l
             tooltip="Click to break down late jobs by plant"
             onClick={() => setShowLateBreakdown((prev) => !prev)}
           />
-          <MetricCard label="Late Revenue" value={formatCurrency(revenueByStatus.late)} color="red" />
-          <MetricCard label="At Risk Revenue" value={formatCurrency(revenueByStatus.atRisk)} color="orange" />
-          <MetricCard label="Expected Revenue" value={formatCurrency(revenueByStatus.onTrack)} color="green" />
+          <MetricCard 
+            label="Late Revenue" 
+            value={iqmsRevenueMetrics ? formatCurrency(iqmsRevenueMetrics.lateRevenue) : formatCurrency(revenueByStatus.late)} 
+            color="red"
+          />
+          <MetricCard 
+            label="At Risk Revenue" 
+            value={iqmsRevenueMetrics ? formatCurrency(iqmsRevenueMetrics.atRiskRevenue) : formatCurrency(revenueByStatus.atRisk)} 
+            color="orange"
+          />
+          <MetricCard 
+            label="Expected Revenue" 
+            value={iqmsRevenueMetrics ? formatCurrency(iqmsRevenueMetrics.onTimeRevenue) : formatCurrency(revenueByStatus.onTrack)} 
+            color="green"
+          />
         </section>
 
         {showLateBreakdown && (
