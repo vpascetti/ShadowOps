@@ -1,0 +1,151 @@
+/* ==========================================================================
+   PLANT IMPACT PANEL
+   ========================================================================== */
+
+.plant-impact-panel {
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid #dc2626;
+}
+
+.plant-impact-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.plant-impact-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.plant-impact-subtitle {
+  margin: 0.35rem 0 0 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.plant-impact-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.plant-impact-card {
+  text-align: left;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #f9fafb;
+  color: inherit;
+  font: inherit;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.plant-impact-card.clickable {
+  cursor: pointer;
+}
+
+.plant-impact-card:hover {
+  border-color: #dc2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.12);
+}
+
+.plant-impact-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.plant-impact-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.plant-impact-metric {
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.plant-impact-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.plant-impact-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.plant-impact-value.late {
+  color: #dc2626;
+}
+
+.plant-impact-value.at-risk {
+  color: #f97316;
+}
+
+.plant-impact-revenue {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.5rem;
+}
+
+.plant-impact-revenue-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.plant-impact-revenue-summary {
+  margin-left: 0.5rem;
+  font-weight: 600;
+}
+
+.plant-impact-value.revenue-late,
+.plant-impact-revenue-summary.revenue-late {
+  color: #dc2626;
+}
+
+.plant-impact-value.revenue-at-risk,
+.plant-impact-revenue-summary.revenue-at-risk {
+  color: #f59e0b;
+}
+
+.plant-impact-value.revenue-on-track,
+.plant-impact-revenue-summary.revenue-on-track {
+  color: #16a34a;
+}
+
+@media (max-width: 768px) {
+  .plant-impact-panel {
+    padding: 1rem;
+  }
+
+  .plant-impact-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

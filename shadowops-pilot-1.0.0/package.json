@@ -1,0 +1,13 @@
+{
+  "name": "shadowops-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/*/*"
+  ],
+  "scripts": {
+    "lint": "npm run lint -ws",
+    "test": "npm run test -ws"
+  }
+}

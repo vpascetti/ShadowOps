@@ -1,0 +1,9 @@
+.inventory-panel{padding:12px;background:#fff;border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,0.03)}
+.inventory-table{width:100%;border-collapse:collapse;font-size:14px}
+.inventory-table th{text-align:left;padding:8px 10px;border-bottom:1px solid #eee}
+.inventory-table td{padding:8px 10px;border-bottom:1px solid #fafafa}
+.inv-row.under td{background:#fff6f6}
+.inv-row.over td{background:#f6fff6}
+.status-cell{font-weight:600}
+.actions-cell button{margin-right:6px;padding:4px 8px;border-radius:4px;border:1px solid #ddd;background:#fafafa;cursor:pointer}
+.actions-cell button:hover{background:#f0f0f0}

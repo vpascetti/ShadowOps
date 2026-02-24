@@ -1,0 +1,274 @@
+/* ============================================================================
+   RUN LIST PANEL STYLES
+   ============================================================================ */
+
+.run-list-panel {
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid #2563eb;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.run-list-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.run-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1rem;
+}
+
+.run-list-wc-card {
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.run-list-wc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.run-list-wc-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.run-list-job-count {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.run-list-jobs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.run-list-job-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.run-list-job-row:hover {
+  border-color: #2563eb;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.1);
+}
+
+.run-list-job-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.run-list-job-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+}
+
+.run-list-job-id {
+  font-weight: 600;
+  color: #1f2937;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+.run-list-job-customer {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.run-list-revenue {
+  font-weight: 700;
+  color: #16a34a;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  background: rgba(22, 163, 74, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.run-list-revenue.revenue-late {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.12);
+}
+
+.run-list-revenue.revenue-at-risk {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.run-list-revenue.revenue-on-track {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.run-list-job-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.run-list-metric {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1f2937;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.metric-value.overdue {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.metric-value.urgent {
+  color: #f97316;
+  font-weight: 700;
+}
+
+.metric-value.behind {
+  color: #f97316;
+}
+
+.metric-warning {
+  font-size: 0.75rem;
+  color: #f97316;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.run-list-blockers {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.blockers-label {
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.blocker-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.blocker-badge.blocker-material {
+  background: rgba(220, 38, 38, 0.15);
+  color: #dc2626;
+}
+
+.blocker-badge.blocker-capacity {
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+}
+
+.blocker-badge.blocker-labor {
+  background: rgba(31, 59, 122, 0.15);
+  color: #1f3b7a;
+}
+
+@media (max-width: 768px) {
+  .run-list-panel {
+    margin: 1rem 0;
+    padding: 1rem;
+  }
+
+  .run-list-grid {
+    grid-template-columns: 1fr;
+  }
+}
+  font-weight: 700;
+  color: #2563eb;
+  font-size: 1.1rem;
+}
+
+@media (max-width: 1024px) {
+  .run-list-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  .run-list-job-row {
+    grid-template-columns: 1fr 1fr 0.5fr;
+    gap: 0.4rem;
+  }
+
+  .run-list-due-date {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .run-list-panel {
+    margin: 1rem 0;
+    padding: 1rem;
+  }
+
+  .run-list-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .run-list-job-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .run-list-priority-score {
+    display: none;
+  }
+}

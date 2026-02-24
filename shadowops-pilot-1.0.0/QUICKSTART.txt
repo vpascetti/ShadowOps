@@ -1,0 +1,23 @@
+╔════════════════════════════════════════════════════╗
+║          ShadowOps Pilot Package                   ║
+║          Quick Start Guide                         ║
+╚════════════════════════════════════════════════════╝
+
+🚀 GET STARTED IN 3 STEPS:
+
+  1. Ensure Docker is installed and running
+     https://www.docker.com/products/docker-desktop
+
+  2. Run the start script:
+     ./start.sh
+
+  3. Open your browser:
+     http://localhost:5173
+
+📖 FOR DETAILED SETUP:
+   See README.md for full instructions
+
+🆘 NEED HELP?
+   Check README.md troubleshooting section
+
+🎉 Ready to deploy your manufacturing operations!

@@ -1,0 +1,237 @@
+.material-shortage-panel {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.material-shortage-panel h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  color: #1a1a2e;
+}
+
+.material-shortage-panel .panel-description {
+  margin: 0 0 1rem 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.material-shortage-panel .empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: #059669;
+  font-size: 1.1rem;
+}
+
+.shortage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.shortage-card {
+  border-left: 4px solid #666;
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.shortage-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateX(2px);
+}
+
+.shortage-card.critical {
+  border-left-color: #dc2626;
+  background: #fef2f2;
+}
+
+.shortage-card.warning {
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.shortage-card.watch {
+  border-left-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.shortage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.shortage-job {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1a1a2e;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.expand-icon {
+  font-size: 0.8rem;
+  color: #666;
+  transition: transform 0.2s ease;
+}
+
+.shortage-severity {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+}
+
+.shortage-severity.critical {
+  background: #dc2626;
+  color: white;
+}
+
+.shortage-severity.warning {
+  background: #f59e0b;
+  color: white;
+}
+
+.shortage-severity.watch {
+  background: #3b82f6;
+  color: white;
+}
+
+.shortage-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shortage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.shortage-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.shortage-value {
+  color: #1a1a2e;
+  font-weight: 600;
+}
+
+.shortage-qty {
+  color: #dc2626;
+}
+
+.shortage-date {
+  color: #0369a1;
+}
+
+.material-breakdown {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.material-breakdown h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  color: #1a1a2e;
+}
+
+.loading-materials,
+.no-materials {
+  padding: 1rem;
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.materials-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.materials-table thead {
+  background: #f3f4f6;
+}
+
+.materials-table th {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #d1d5db;
+  white-space: nowrap;
+}
+
+.materials-table th:nth-child(3),
+.materials-table th:nth-child(4),
+.materials-table th:nth-child(5) {
+  text-align: right;
+}
+
+.materials-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+}
+
+.materials-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.materials-table tbody tr.has-shortage {
+  background: #fef2f2;
+}
+
+.materials-table tbody tr.has-shortage:hover {
+  background: #fee2e2;
+}
+
+.materials-table .item-no {
+  font-weight: 600;
+  color: #1a1a2e;
+  white-space: nowrap;
+}
+
+.materials-table .material-desc {
+  color: #666;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.materials-table .qty-required,
+.materials-table .qty-onhand {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  white-space: nowrap;
+  padding-right: 1rem;
+}
+
+.materials-table .qty-short {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #dc2626;
+  white-space: nowrap;
+  padding-right: 1rem;
+}
+
+.materials-table .prod-date {
+  color: #666;
+  font-size: 0.8rem;
+}

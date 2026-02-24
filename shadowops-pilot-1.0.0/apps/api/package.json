@@ -1,0 +1,29 @@
+{
+  "name": "shadowops-api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "seed": "node seed_inventory.js"
+  },
+  "dependencies": {
+    "@shadowops/adapters-iqms": "*",
+    "@shadowops/core": "*",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "oracledb": "^6.5.1",
+    "papaparse": "^5.5.3",
+    "pg": "^8.11.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.22",
+    "@types/node": "^20.11.30",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,26 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY tsconfig.base.json ./
+COPY apps/api ./apps/api
+COPY packages ./packages
+
+# Install dependencies
+RUN npm ci --workspace=apps/api
+
+# Build if needed
+WORKDIR /app/apps/api
+RUN npm run build 2>/dev/null || true
+
+# Expose port
+EXPOSE 5050
+
+# Health check script
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:${PORT:-5050}/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+
+# Start app
+CMD ["npm", "run", "dev"]
