@@ -279,28 +279,36 @@ export default function ExecutiveBriefing({ asOfDate, metrics = {}, jobs = [], l
         </header>
 
         <section className="briefing-section briefing-cards">
-          <MetricCard label="Total Jobs" value={total} color="neutral" />
+          <MetricCard 
+            label="Total Jobs" 
+            value={total} 
+            color="neutral"
+            tooltip="Total number of jobs in your current snapshot"
+          />
           <MetricCard
             label="Late"
             value={late}
             color="red"
-            tooltip="Click to break down late jobs by plant"
+            tooltip="Jobs that have passed their due date. Click to see breakdown by plant and root cause."
             onClick={() => setShowLateBreakdown((prev) => !prev)}
           />
           <MetricCard 
             label="Late Revenue" 
             value={formatCurrency(revenueByStatus.late)} 
             color="red"
+            tooltip="Estimated revenue impact from jobs currently behind schedule"
           />
           <MetricCard 
             label="At Risk Revenue" 
             value={formatCurrency(revenueByStatus.atRisk)} 
             color="orange"
+            tooltip="Estimated revenue at risk from jobs showing early warning signs (material shortages, tight schedules, or production speed concerns)"
           />
           <MetricCard 
             label="Expected Revenue" 
             value={formatCurrency(revenueByStatus.onTrack)} 
             color="green"
+            tooltip="Estimated revenue from jobs on track to meet their commitments"
           />
         </section>
 
