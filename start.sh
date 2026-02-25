@@ -1,4 +1,4 @@
-#!bin/bash
+#!/bin/bash
 
 # ShadowOps - Quick Start Script
 # This script starts all required services for the demo
@@ -48,8 +48,17 @@ BACKEND_PID=$!
 cd ../..
 sleep 2
 
-# Check backend health
-if curl -s http://localhost:5050/health | grep -q "ok"; then
+# Check backend health (retry for up to ~15s)
+BACKEND_OK=false
+for _ in {1..10}; do
+    if curl -s http://localhost:5050/health | grep -q '"ok":true'; then
+        BACKEND_OK=true
+        break
+    fi
+    sleep 1.5
+done
+
+if [ "$BACKEND_OK" = true ]; then
     echo "Backend server is running (PID: $BACKEND_PID)"
 else
     echo "Backend server failed to start. Check server.log for details."

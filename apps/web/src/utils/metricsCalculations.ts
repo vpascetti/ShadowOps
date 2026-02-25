@@ -276,7 +276,7 @@ export function deriveWorkCenterSummary(jobs) {
  */
 export function formatCurrency(value) {
   const amount = Number(value)
-  if (!Number.isFinite(amount)) return '$0'
+  if (!Number.isFinite(amount) || isNaN(amount)) return '$0'
   return `$${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
 }
 

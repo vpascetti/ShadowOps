@@ -176,7 +176,7 @@ export default function ExecutiveBriefing({ asOfDate, metrics = {}, jobs = [], l
     const fetchMetrics = async () => {
       try {
         setLoadingMetrics(true)
-        const res = await fetch('/executive-briefing-metrics')
+        const res = await fetch('/api/executive-briefing-metrics')
         const data = await res.json()
         if (data.ok) {
           setIqmsRevenueMetrics(data.metrics)
@@ -265,7 +265,7 @@ export default function ExecutiveBriefing({ asOfDate, metrics = {}, jobs = [], l
   const snapshotText = snapshotLabel ? formatDate(snapshotLabel) : 'Unknown'
   const glanceItems = [
     drivers.wcDriver
-      ? `Bottleneck: ${drivers.wcDriver.workCenter} has ${(drivers.wcDriver.lateJobs || 0) + (drivers.wcDriver.atRiskJobs || 0)} of ${drivers.riskCount} late/at-risk jobs.`
+      ? `Bottleneck: ${drivers.wcDriver.workCenter} has ${(drivers.wcDriver.lateJobs || 0) + (drivers.wcDriver.atRiskJobs || 0)} of ${drivers.wcDriver.totalJobs || 0} jobs late/at-risk.`
       : 'Bottleneck: no major concentration detected.',
     drivers.hasSignals
       ? (drivers.materialCount > 0
