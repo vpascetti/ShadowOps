@@ -16,14 +16,14 @@
 
 .briefing-title {
 	margin: 0;
-	font-size: 1.4rem;
+	font-size: clamp(1.2rem, 3vw, 1.4rem);
 	color: #16213e;
 }
 
 .briefing-subtitle {
 	margin: 0.25rem 0 0 0;
 	color: #555;
-	font-size: 0.95rem;
+	font-size: clamp(0.85rem, 2vw, 0.95rem);
 }
 
 .briefing-metrics-grid {
@@ -86,9 +86,129 @@
 	color: #666;
 }
 
-/* compact layout for smaller screens */
-@media (max-width: 900px) {
-	.briefing-metrics-grid { grid-template-columns: repeat(2,1fr); }
-	.briefing-hotspots-grid, .briefing-jobs-list { grid-template-columns: 1fr; }
+/* Tablet (medium screens) */
+@media (max-width: 1024px) {
+	.daily-briefing {
+		padding: 1rem;
+	}
+
+	.briefing-metrics-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.5rem;
+	}
+
+	.briefing-hotspots-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	.briefing-jobs-list {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	.briefing-alerts-list {
+		flex-direction: column;
+	}
+}
+
+/* Large phones and small tablets */
+@media (max-width: 768px) {
+	.daily-briefing {
+		margin: 0.5rem auto;
+		padding: 0.75rem;
+		border-radius: 6px;
+	}
+
+	.briefing-header {
+		padding: 0.4rem 0 0.5rem 0;
+	}
+
+	.briefing-title {
+		font-size: 1.2rem;
+	}
+
+	.briefing-subtitle {
+		font-size: 0.85rem;
+	}
+
+	.briefing-metrics-grid {
+		grid-template-columns: 1fr 1fr;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+	}
+
+	.briefing-section {
+		margin-top: 0.75rem;
+		padding: 0.5rem 0;
+	}
+
+	.briefing-section h2 {
+		font-size: 0.95rem;
+		margin: 0 0 0.35rem 0;
+	}
+
+	.briefing-hotspots-grid,
+	.briefing-jobs-list {
+		grid-template-columns: 1fr;
+		gap: 0.4rem;
+	}
+
+	.briefing-job-row {
+		padding: 0.5rem;
+		gap: 0.3rem;
+	}
+
+	.briefing-alerts-list {
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+
+	.briefing-alert-item {
+		padding: 0.5rem;
+	}
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+	.daily-briefing {
+		margin: 0.25rem auto;
+		padding: 0.5rem;
+		border-radius: 4px;
+		box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+	}
+
+	.briefing-header {
+		margin-bottom: 0.5rem;
+	}
+
+	.briefing-title {
+		font-size: 1.1rem;
+		margin: 0;
+	}
+
+	.briefing-subtitle {
+		font-size: 0.8rem;
+	}
+
+	.briefing-metrics-grid {
+		grid-template-columns: 1fr;
+		gap: 0.4rem;
+		margin-top: 0.4rem;
+	}
+
+	.briefing-section {
+		margin-top: 0.5rem;
+		padding: 0.35rem 0;
+	}
+
+	.briefing-section h2 {
+		font-size: 0.9rem;
+		margin: 0 0 0.3rem 0;
+	}
+
+	.briefing-footer {
+		margin-top: 0.5rem;
+		padding-top: 0.4rem;
+		font-size: 0.8rem;
+	}
 }
 

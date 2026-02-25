@@ -19,7 +19,8 @@ import {
   getShippingStatusByCustomer, 
   getJobShipments, 
   getShippingAnomalies, 
-  getShippingForecast 
+  getShippingForecast,
+  getOnTimeRevenueFromShipments
 } from './shipping-service.js'
 
 dotenv.config()
@@ -1343,6 +1344,122 @@ app.get('/api/shipping/forecast', async (req, res) => {
   } catch (err) {
     console.error('Error generating shipping forecast:', err)
     res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Get on-time revenue based on actual shipments (vs job completion)
+// This is the CORRECT metric for measuring shipping performance
+// It compares actual_ship_date to promised_date
+app.get('/api/shipping/on-time-revenue', async (req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    
+    const revenueMetrics = await getOnTimeRevenueFromShipments(tenantId)
+    
+    res.json({
+      ok: true,
+      metrics: revenueMetrics,
+      explanation: 'On-time revenue calculated from SHIPMENTS table (actual_ship_date vs promised_date). A job can be complete but shipped late = late revenue.'
+    })
+  } catch (err) {
+    console.error('Error calculating on-time revenue from shipments:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Simple test endpoint: Count current shipments
+app.get('/api/test/shipments-count', async (req, res) => {
+  try {
+    const result = await query('SELECT COUNT(*) as count FROM shipments')
+    res.json({
+      ok: true,
+      shipmentCount: parseInt(result.rows[0].count, 10)
+    })
+  } catch (err) {
+    console.error('Error counting shipments:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// Test data endpoint: Create sample shipments for testing on-time revenue
+app.post('/api/test/create-sample-shipments', async (req, res) => {
+  try {
+    const { tenantId } = await ensureDemoTenantAndToken()
+    console.log('[test/create-sample-shipments] Starting. TenantId:', tenantId)
+    
+    // Clear existing test shipments
+    console.log('[test/create-sample-shipments] Clearing existing test shipments...')
+    const delResult = await query('DELETE FROM shipments WHERE source = $1', ['test'])
+    console.log('[test/create-sample-shipments] Deleted:', delResult.rowCount)
+    
+    // Create sample shipment data directly
+    console.log('[test/create-sample-shipments] Creating shipments...')
+    
+    const baseDate = new Date('2026-02-15')
+    const shipmentData = [
+      // On-time shipments
+      { jobId: 633736, customer: 'MARINE', qty: 3000, promiseDays: 20, lateDays: -3, status: 'On Time' },
+      { jobId: 633738, customer: 'MARINE', qty: 2500, promiseDays: 25, lateDays: -2, status: 'On Time' },
+      { jobId: 633740, customer: 'MECH', qty: 2000, promiseDays: 20, lateDays: -1, status: 'On Time' },
+      { jobId: 633742, customer: 'MECH', qty: 1500, promiseDays: 25, lateDays: 0, status: 'On Time' },
+      { jobId: 633744, customer: 'AUTO', qty: 2200, promiseDays: 30, lateDays: -5, status: 'On Time' },
+      // Late shipments
+      { jobId: 633746, customer: 'MARINE', qty: 1800, promiseDays: 20, lateDays: 3, status: 'Late' },
+      { jobId: 633748, customer: 'MECH', qty: 2100, promiseDays: 25, lateDays: 5, status: 'Late' },
+      { jobId: 633750, customer: 'AUTO', qty: 2400, promiseDays: 20, lateDays: 2, status: 'Late' },
+    ]
+    
+    let shipmentCount = 0
+    for (const shipment of shipmentData) {
+      const promisedDate = new Date(baseDate.getTime() + shipment.promiseDays * 24 * 60 * 60 * 1000)
+      const actualDate = new Date(promisedDate.getTime() + shipment.lateDays * 24 * 60 * 60 * 1000)
+      const unitPrice = 50
+      const totalValue = shipment.qty * unitPrice
+      
+      await query(
+        `INSERT INTO shipments (
+          tenant_id, workorder_id, job_id, item_number, description, 
+          customer_id, customer_name, qty_ordered, qty_shipped,
+          actual_ship_date, promised_date, delivery_status, days_late_or_early,
+          shipping_carrier, tracking_number, source
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        ON CONFLICT (tenant_id, workorder_id) DO UPDATE SET
+          qty_shipped = EXCLUDED.qty_shipped,
+          actual_ship_date = EXCLUDED.actual_ship_date,
+          delivery_status = EXCLUDED.delivery_status`,
+        [
+          tenantId,
+          shipment.jobId * 100,
+          shipment.jobId,
+          `PART-${shipment.jobId}`,
+          `Test shipment for job ${shipment.jobId}`,
+          shipment.customer,
+          shipment.customer,
+          shipment.qty,
+          shipment.qty,
+          actualDate,
+          promisedDate,
+          shipment.status,
+          shipment.lateDays,
+          'FedEx',
+          `TRK-TEST-${shipment.jobId}`,
+          'test'
+        ]
+      )
+      shipmentCount++
+    }
+    
+    console.log('[test/create-sample-shipments] Complete. Created', shipmentCount, 'shipments')
+    
+    res.json({
+      ok: true,
+      message: `Created ${shipmentCount} test shipments`,
+      shipmentCount,
+      details: 'Test shipments created for testing on-time revenue calculation'
+    })
+  } catch (err) {
+    console.error('Error creating test shipments:', err)
+    res.status(500).json({ ok: false, error: err.message, stack: err.stack })
   }
 })
 

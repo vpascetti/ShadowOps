@@ -321,3 +321,95 @@ export async function getShippingForecast(tenantId, daysAhead = 7) {
     return null
   }
 }
+/**
+ * Calculate ON-TIME REVENUE based on actual shipments
+ * 
+ * This is the correct way to measure on-time revenue:
+ * - Compare ACTUAL_SHIP_DATE to PROMISED_DATE
+ * - If shipped <= promise date → counts as ON-TIME REVENUE
+ * - A job can be complete but shipped late = LATE REVENUE
+ * 
+ * @param {string} tenantId - Tenant ID
+ * @returns {Object} On-time revenue metrics from shipments
+ */
+export async function getOnTimeRevenueFromShipments(tenantId) {
+  try {
+    // Query shipments and join with jobs to get pricing data
+    const result = await query(
+      `SELECT
+        s.job_id,
+        s.actual_ship_date,
+        s.promised_date,
+        s.qty_shipped,
+        j.total_order_value,
+        j.unit_price,
+        CASE 
+          WHEN s.actual_ship_date IS NULL THEN 'Not Shipped'
+          WHEN s.actual_ship_date::date <= s.promised_date::date THEN 'On Time'
+          ELSE 'Late'
+        END as ship_status
+      FROM shipments s
+      LEFT JOIN jobs j ON s.job_id = j.job_id AND j.tenant_id = $1
+      WHERE s.tenant_id = $1
+        AND s.actual_ship_date IS NOT NULL
+      ORDER BY s.actual_ship_date DESC`,
+      [tenantId]
+    )
+
+    const shipments = result.rows || []
+    
+    // Calculate revenue by shipping status
+    let onTimeRevenue = 0
+    let lateRevenue = 0
+    let onTimeCount = 0
+    let lateCount = 0
+
+    shipments.forEach(shipment => {
+      // Use total_order_value if available, otherwise unit_price * qty_shipped
+      let revenue = 0
+      if (shipment.total_order_value && shipment.total_order_value > 0) {
+        revenue = parseFloat(shipment.total_order_value)
+      } else if (shipment.unit_price && shipment.qty_shipped) {
+        revenue = parseFloat(shipment.unit_price) * parseFloat(shipment.qty_shipped)
+      } else if (shipment.qty_shipped) {
+        // Fallback: estimate $50/unit if no pricing data available
+        revenue = parseFloat(shipment.qty_shipped) * 50
+      }
+
+      if (shipment.ship_status === 'On Time') {
+        onTimeRevenue += revenue
+        onTimeCount++
+      } else if (shipment.ship_status === 'Late') {
+        lateRevenue += revenue
+        lateCount++
+      }
+    })
+
+    const totalRevenue = onTimeRevenue + lateRevenue
+    const onTimePercent = totalRevenue > 0 ? (onTimeRevenue / totalRevenue * 100) : 0
+
+    return {
+      on_time_revenue: onTimeRevenue,
+      late_revenue: lateRevenue,
+      total_shipped_revenue: totalRevenue,
+      on_time_shipments: onTimeCount,
+      late_shipments: lateCount,
+      total_shipments: shipments.length,
+      on_time_percent: Math.round(onTimePercent * 10) / 10,
+      metric_type: 'shipment_based'
+    }
+  } catch (err) {
+    console.error('Error calculating on-time revenue from shipments:', err)
+    return {
+      on_time_revenue: 0,
+      late_revenue: 0,
+      total_shipped_revenue: 0,
+      on_time_shipments: 0,
+      late_shipments: 0,
+      total_shipments: 0,
+      on_time_percent: 0,
+      error: err.message,
+      metric_type: 'shipment_based'
+    }
+  }
+}

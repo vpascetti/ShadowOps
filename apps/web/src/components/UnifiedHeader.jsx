@@ -28,7 +28,7 @@ export default function UnifiedHeader({
             className={`unified-header__nav-btn ${currentView === 'dashboard' ? 'active' : ''}`}
             onClick={() => onViewChange('dashboard')}
           >
-            Operational Dashboard
+            Operations Intelligence
           </button>
           <button
             className={`unified-header__nav-btn ${currentView === 'plant-pulse' ? 'active' : ''}`}
