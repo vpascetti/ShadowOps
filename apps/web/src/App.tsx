@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import './App.css'
 import LegacyDashboard from './LegacyDashboard'
 import FinancialSummary from './components/FinancialSummary'
@@ -57,6 +57,13 @@ export default function App() {
   const [dueEnd, setDueEnd] = useState('')
   const [resourceFilter, setResourceFilter] = useState('')
 
+  const demoAuthRequired = import.meta.env.VITE_DEMO_PASSWORD_REQUIRED === 'true'
+  const DEMO_PASSWORD_KEY = 'shadowops_demo_password'
+  const [demoPassword, setDemoPassword] = useState(() => sessionStorage.getItem(DEMO_PASSWORD_KEY) || '')
+  const [demoPasswordInput, setDemoPasswordInput] = useState('')
+  const [demoAuthError, setDemoAuthError] = useState('')
+  const [demoAuthBusy, setDemoAuthBusy] = useState(false)
+
   const handleViewChange = (newView: string) => {
     setView(newView as any)
   }
@@ -74,6 +81,13 @@ export default function App() {
 
   useEffect(() => {
     let ignore = false
+    if (demoAuthRequired && !demoPassword) {
+      setLoading(false)
+      return () => {
+        ignore = true
+      }
+    }
+
     const load = async () => {
       setLoading(true)
       setError(null)
@@ -102,7 +116,7 @@ export default function App() {
     return () => {
       ignore = true
     }
-  }, [queryString, reloadToken])
+  }, [queryString, reloadToken, demoAuthRequired, demoPassword])
 
   // Auto-refresh data every 5 minutes
   useEffect(() => {
@@ -112,6 +126,63 @@ export default function App() {
 
     return () => clearInterval(interval)
   }, [])
+
+  const shouldShowDemoGate = demoAuthRequired && !demoPassword
+
+  useEffect(() => {
+    if (!demoAuthRequired || !demoPassword) return
+    let active = true
+
+    const verify = async () => {
+      try {
+        const res = await fetch('/api/health', {
+          headers: { 'x-demo-password': demoPassword }
+        })
+        if (!res.ok && res.status === 401 && active) {
+          sessionStorage.removeItem(DEMO_PASSWORD_KEY)
+          setDemoPassword('')
+          setDemoAuthError('Password expired or invalid.')
+        }
+      } catch (_e) {
+        if (active) {
+          setDemoAuthError('Unable to reach server.')
+        }
+      }
+    }
+
+    verify()
+    return () => {
+      active = false
+    }
+  }, [demoAuthRequired, demoPassword])
+
+  const handleDemoAuthSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const nextPassword = demoPasswordInput.trim()
+    if (!nextPassword) return
+
+    setDemoAuthBusy(true)
+    setDemoAuthError('')
+
+    try {
+      const res = await fetch('/api/health', {
+        headers: { 'x-demo-password': nextPassword }
+      })
+
+      if (!res.ok) {
+        setDemoAuthError('Incorrect password. Please try again.')
+        return
+      }
+
+      sessionStorage.setItem(DEMO_PASSWORD_KEY, nextPassword)
+      setDemoPassword(nextPassword)
+      setDemoPasswordInput('')
+    } catch (_e) {
+      setDemoAuthError('Unable to reach server.')
+    } finally {
+      setDemoAuthBusy(false)
+    }
+  }
 
   const formatRiskReason = (reason?: string) => {
     if (!reason) return '—'
@@ -132,6 +203,31 @@ export default function App() {
     } catch (err) {
       setError((err as Error).message)
     }
+  }
+
+  if (shouldShowDemoGate) {
+    return (
+      <div className="demo-auth-page">
+        <div className="demo-auth-card">
+          <p className="demo-auth-eyebrow">ShadowOps</p>
+          <h1 className="demo-auth-title">Demo Access</h1>
+          <p className="demo-auth-subtitle">Enter the shared password to continue.</p>
+          <form className="demo-auth-form" onSubmit={handleDemoAuthSubmit}>
+            <input
+              type="password"
+              placeholder="Shared password"
+              value={demoPasswordInput}
+              onChange={(event) => setDemoPasswordInput(event.target.value)}
+              autoFocus
+            />
+            <button type="submit" disabled={demoAuthBusy || !demoPasswordInput.trim()}>
+              {demoAuthBusy ? 'Checking...' : 'Unlock'}
+            </button>
+          </form>
+          {demoAuthError ? <div className="demo-auth-error">{demoAuthError}</div> : null}
+        </div>
+      </div>
+    )
   }
 
   if (view === 'briefing' || view === 'dashboard' || view === 'actions' || view === 'legacy') {

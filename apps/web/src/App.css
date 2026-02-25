@@ -454,7 +454,9 @@ tbody tr:hover {
   font-size: 0.95rem;
   line-height: 1.5;
   white-space: normal;
-  max-width: 320px;
+  width: max-content;
+  min-width: 240px;
+  max-width: 360px;
   text-align: center;
   opacity: 0;
   visibility: hidden;
@@ -1844,4 +1846,85 @@ body {
   }
 }
 
+.demo-auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  background: radial-gradient(circle at top, #fff7eb 0%, #f6efe6 48%, #f0e6da 100%);
+}
+
+.demo-auth-card {
+  width: min(420px, 100%);
+  background: #ffffff;
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 18px 40px -26px rgba(16, 19, 26, 0.4);
+}
+
+.demo-auth-eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.25rem;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.demo-auth-title {
+  margin: 0 0 0.5rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.8rem;
+}
+
+.demo-auth-subtitle {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+}
+
+.demo-auth-form {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.demo-auth-form input {
+  flex: 1;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: #fff;
+  font-family: inherit;
+}
+
+.demo-auth-form button {
+  padding: 0.7rem 1.1rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.demo-auth-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.demo-auth-error {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: #b91c1c;
+}
+
+@media (max-width: 600px) {
+  .demo-auth-form {
+    flex-direction: column;
+  }
+
+  .demo-auth-form button {
+    width: 100%;
+  }
+}
 

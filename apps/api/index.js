@@ -62,6 +62,18 @@ const upload = multer({ storage: multer.memoryStorage() })
 app.use(cors())
 app.use(express.json())
 
+const DEMO_PASSWORD = (process.env.DEMO_PASSWORD || '').trim()
+
+function requireDemoPassword(req, res, next) {
+  if (!DEMO_PASSWORD) return next()
+  if (req.method === 'OPTIONS') return next()
+  const provided = req.header('x-demo-password')
+  if (provided && provided === DEMO_PASSWORD) return next()
+  return res.status(401).json({ ok: false, error: 'Unauthorized' })
+}
+
+app.use('/api', requireDemoPassword)
+
 // Health
 app.get('/api/health', (req, res) => {
   res.json({ ok: true })
