@@ -1,0 +1,32 @@
+FROM node:20-alpine as builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY tsconfig.base.json ./
+COPY apps/web ./apps/web
+COPY packages ./packages
+
+# Install dependencies
+RUN npm ci --workspace=apps/web
+
+# Build
+WORKDIR /app/apps/web
+RUN npm run build
+
+# Production stage
+FROM nginx:alpine
+
+# Copy nginx config
+COPY installer/nginx.conf /etc/nginx/nginx.conf
+
+# Copy built app
+COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

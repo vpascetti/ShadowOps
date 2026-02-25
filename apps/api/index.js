@@ -374,17 +374,26 @@ app.get('/api/financial-summary', async (req, res) => {
           AND vrc.PROMISE_DATE < TO_DATE('${endDate || '2099-12-31'}', 'YYYY-MM-DD') + 1
       `)
 
+      const shipmentMetrics = await getOnTimeRevenueFromShipments(tenantId)
+
       const revenueAtRisk = parseFloat(riskData[0]?.REVENUE_AT_RISK || 0)
       const atRiskReleaseCount = parseInt(riskData[0]?.AT_RISK_RELEASE_COUNT || 0, 10)
       const totalOrderValue = parseFloat(totalOrderData[0]?.TOTAL_ORDER_VALUE || 0)
       const totalOrderQty = parseFloat(totalOrderData[0]?.TOTAL_QTY || 0)
       
-      const onTimeRevenue = parseFloat(onTimeData[0]?.ON_TIME_REVENUE || 0)
-      const onTimeReleaseCount = parseInt(onTimeData[0]?.ON_TIME_RELEASE_COUNT || 0, 10)
+      const iqmsOnTimeRevenue = parseFloat(onTimeData[0]?.ON_TIME_REVENUE || 0)
+      const iqmsOnTimeReleaseCount = parseInt(onTimeData[0]?.ON_TIME_RELEASE_COUNT || 0, 10)
+
+      const onTimeRevenue = shipmentMetrics.total_shipped_revenue > 0
+        ? parseFloat(shipmentMetrics.on_time_revenue || 0)
+        : iqmsOnTimeRevenue
+      const onTimeReleaseCount = shipmentMetrics.total_shipped_revenue > 0
+        ? parseInt(shipmentMetrics.on_time_shipments || 0, 10)
+        : iqmsOnTimeReleaseCount
 
       console.log(`Total Scheduled Order Value: $${totalOrderValue.toFixed(2)}`)
       console.log(`Revenue at Risk (PROD_END_TIME > PROMISE_DATE): $${revenueAtRisk.toFixed(2)} (${atRiskReleaseCount} releases)`)
-      console.log(`On-Time Revenue (shipped on/before promise date): $${onTimeRevenue.toFixed(2)} (${onTimeReleaseCount} releases)`)
+      console.log(`On-Time Revenue (shipment-based when available): $${onTimeRevenue.toFixed(2)} (${onTimeReleaseCount} releases)`)
 
       // Delayed Order Impact = Revenue at Risk (orders that will be late based on current schedule)
       const delayedOrderImpact = revenueAtRisk
@@ -441,40 +450,11 @@ app.get('/api/executive-briefing-metrics', async (req, res) => {
   const { tenantId } = await ensureDemoTenantAndToken()
 
   try {
-    // PRIMARY SOURCE: Use shipment-based revenue (most accurate)
-    try {
-      const shipmentMetrics = await getOnTimeRevenueFromShipments(tenantId)
-      
-      console.log(`Shipment-based metrics:
-        On-Time Revenue: $${shipmentMetrics.on_time_revenue}
-        Late Revenue: $${shipmentMetrics.late_revenue}
-        On-Time Shipments: ${shipmentMetrics.on_time_shipments}
-        Late Shipments: ${shipmentMetrics.late_shipments}`)
-      
-      return res.json({
-        ok: true,
-        metrics: {
-          lateRevenue: parseFloat(shipmentMetrics.late_revenue.toFixed(2)),
-          lateReleaseCount: shipmentMetrics.late_shipments,
-          atRiskRevenue: 0,
-          atRiskReleaseCount: 0,
-          onTimeRevenue: parseFloat(shipmentMetrics.on_time_revenue.toFixed(2)),
-          onTimeReleaseCount: shipmentMetrics.on_time_shipments,
-          totalAtRisk: parseFloat(shipmentMetrics.late_revenue.toFixed(2))
-        },
-        source: 'Shipments (PostgreSQL - PRIMARY SOURCE)',
-        note: 'Shipment-based revenue calculation: actual_ship_date vs promised_date'
-      })
-    } catch (shipErr) {
-      console.warn('Error fetching shipment metrics, falling back to IQMS:', shipErr.message)
-    }
-    
-    // FALLBACK: IQMS data (if shipments unavailable)
     if (!IQMS_ENABLED) {
       return res.status(503).json({
         ok: false,
-        error: 'IQMS not available and shipment metrics failed',
-        message: 'Cannot calculate executive briefing metrics'
+        error: 'IQMS not available',
+        message: 'Executive briefing metrics require live IQMS data'
       })
     }
 
@@ -554,23 +534,7 @@ app.get('/api/executive-briefing-metrics', async (req, res) => {
       })
     } catch (innerErr) {
       console.error('IQMS query error:', innerErr)
-      // Fallback to shipment metrics on IQMS error
-      const shipmentMetrics = await getOnTimeRevenueFromShipments(tenantId)
-      
-      return res.json({
-        ok: true,
-        metrics: {
-          lateRevenue: shipmentMetrics.late_revenue || 0,
-          lateReleaseCount: shipmentMetrics.late_shipments || 0,
-          atRiskRevenue: 0,
-          atRiskReleaseCount: 0,
-          onTimeRevenue: shipmentMetrics.on_time_revenue || 0,
-          onTimeReleaseCount: shipmentMetrics.on_time_shipments || 0,
-          totalAtRisk: shipmentMetrics.late_revenue || 0
-        },
-        source: 'Shipments (PostgreSQL SHIPMENTS table - IQMS fallback)',
-        note: 'IQMS query failed, using shipment-based calculation'
-      })
+      throw innerErr
     }
   } catch (err) {
     console.error('Executive briefing metrics error:', err)

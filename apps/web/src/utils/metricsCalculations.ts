@@ -73,9 +73,17 @@ export function calculateScheduleRatio(startDateStr, dueDateStr, asOfDate = new 
 /**
  * CRITICAL: Determine job status - SINGLE SOURCE OF TRUTH
  * 
+ * Enhanced logic for At Risk:
+ * 1. Material shortage → At Risk immediately
+ * 2. Dynamic schedule gap based on days until due:
+ *    - < 7 days: 15% gap threshold
+ *    - 7-30 days: 20% gap threshold
+ *    - 30+ days: 25% gap threshold
+ * 3. Production speed check: Can we realistically catch up?
+ * 
  * Every job has EXACTLY ONE status: Late, At Risk, or On Track
  */
-export function determineStatus(dueDateStr, progress, scheduleRatio, asOfDate = new Date()) {
+export function determineStatus(dueDateStr, progress, scheduleRatio, asOfDate = new Date(), hasShortage = false, startDateStr = null) {
   try {
     if (!dueDateStr) return 'On Track'
     
@@ -91,10 +99,47 @@ export function determineStatus(dueDateStr, progress, scheduleRatio, asOfDate = 
       return 'Late'
     }
     
-    // AT RISK: Schedule gap > 25%
+    // Calculate days until due date
+    const daysUntilDue = Math.floor((dueDate.getTime() - asOfDateNormalized.getTime()) / (1000 * 60 * 60 * 24))
+    
+    // CHECK 1: Material shortage
+    if (hasShortage) {
+      return 'At Risk'
+    }
+    
+    // CHECK 2: Schedule gap with dynamic thresholds based on urgency
     if (progress !== null && scheduleRatio !== null) {
-      if (scheduleRatio - progress > 0.25) {
+      const gap = scheduleRatio - progress
+      
+      // Dynamic thresholds: stricter for soon-due jobs
+      let threshold = 0.25
+      if (daysUntilDue <= 7) {
+        threshold = 0.15  // Strict: only 15% gap allowed for jobs due in < 7 days
+      } else if (daysUntilDue <= 30) {
+        threshold = 0.20  // Moderate: 20% gap for jobs due in 7-30 days
+      }
+      // Jobs due 30+ days out use default 0.25
+      
+      if (gap > threshold) {
         return 'At Risk'
+      }
+      
+      // CHECK 3: Production speed viability
+      // If work is behind AND we don't have enough time to catch up at current pace
+      if (gap > 0.05 && daysUntilDue > 0 && startDateStr && progress > 0) {
+        const startDate = parseDate(startDateStr)
+        const elapsedDays = Math.ceil((asOfDateNormalized.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+        
+        if (elapsedDays > 1) {
+          const workRemaining = Math.max(0, 1 - progress)
+          const requiredCompletionRatePerDay = workRemaining / daysUntilDue
+          const currentRatePerDay = progress / elapsedDays
+          
+          // If required rate is 40% faster than current pace, we're at risk
+          if (currentRatePerDay > 0 && requiredCompletionRatePerDay > currentRatePerDay * 1.4) {
+            return 'At Risk'
+          }
+        }
       }
     }
     

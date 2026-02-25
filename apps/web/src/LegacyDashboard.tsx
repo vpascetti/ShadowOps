@@ -252,7 +252,7 @@ function deriveLoadSummary(jobs) {
   return summary
 }
 
-function enrichJob(row, asOfDate = new Date()) {
+function enrichJob(row, asOfDate = new Date(), importStats = null) {
   const cleanRow = {}
   for (const key in row) {
     cleanRow[key] = typeof row[key] === 'string' ? row[key].trim() : row[key]
@@ -260,7 +260,13 @@ function enrichJob(row, asOfDate = new Date()) {
 
   const progress = calculateProgress(cleanRow.QtyReleased, cleanRow.QtyCompleted)
   const scheduleRatio = calculateScheduleRatio(cleanRow.StartDate, cleanRow.DueDate, asOfDate)
-  const status = determineStatus(cleanRow.DueDate, progress, scheduleRatio, asOfDate)
+  
+  // Check for material shortage
+  const hasShortage = cleanRow.material_exception === true || 
+                      cleanRow.material_exception === 'Y' || 
+                      cleanRow.material_exception === '1'
+  
+  const status = determineStatus(cleanRow.DueDate, progress, scheduleRatio, asOfDate, hasShortage, cleanRow.StartDate)
 
   const projectedCompletionDate = calculateProjectedCompletionDate(
     cleanRow.StartDate,
