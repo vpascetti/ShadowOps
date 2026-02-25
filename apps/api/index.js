@@ -441,11 +441,40 @@ app.get('/api/executive-briefing-metrics', async (req, res) => {
   const { tenantId } = await ensureDemoTenantAndToken()
 
   try {
+    // PRIMARY SOURCE: Use shipment-based revenue (most accurate)
+    try {
+      const shipmentMetrics = await getOnTimeRevenueFromShipments(tenantId)
+      
+      console.log(`Shipment-based metrics:
+        On-Time Revenue: $${shipmentMetrics.on_time_revenue}
+        Late Revenue: $${shipmentMetrics.late_revenue}
+        On-Time Shipments: ${shipmentMetrics.on_time_shipments}
+        Late Shipments: ${shipmentMetrics.late_shipments}`)
+      
+      return res.json({
+        ok: true,
+        metrics: {
+          lateRevenue: parseFloat(shipmentMetrics.late_revenue.toFixed(2)),
+          lateReleaseCount: shipmentMetrics.late_shipments,
+          atRiskRevenue: 0,
+          atRiskReleaseCount: 0,
+          onTimeRevenue: parseFloat(shipmentMetrics.on_time_revenue.toFixed(2)),
+          onTimeReleaseCount: shipmentMetrics.on_time_shipments,
+          totalAtRisk: parseFloat(shipmentMetrics.late_revenue.toFixed(2))
+        },
+        source: 'Shipments (PostgreSQL - PRIMARY SOURCE)',
+        note: 'Shipment-based revenue calculation: actual_ship_date vs promised_date'
+      })
+    } catch (shipErr) {
+      console.warn('Error fetching shipment metrics, falling back to IQMS:', shipErr.message)
+    }
+    
+    // FALLBACK: IQMS data (if shipments unavailable)
     if (!IQMS_ENABLED) {
       return res.status(503).json({
         ok: false,
-        error: 'IQMS not available',
-        message: 'Executive briefing metrics require live IQMS data'
+        error: 'IQMS not available and shipment metrics failed',
+        message: 'Cannot calculate executive briefing metrics'
       })
     }
 
@@ -525,7 +554,23 @@ app.get('/api/executive-briefing-metrics', async (req, res) => {
       })
     } catch (innerErr) {
       console.error('IQMS query error:', innerErr)
-      throw innerErr
+      // Fallback to shipment metrics on IQMS error
+      const shipmentMetrics = await getOnTimeRevenueFromShipments(tenantId)
+      
+      return res.json({
+        ok: true,
+        metrics: {
+          lateRevenue: shipmentMetrics.late_revenue || 0,
+          lateReleaseCount: shipmentMetrics.late_shipments || 0,
+          atRiskRevenue: 0,
+          atRiskReleaseCount: 0,
+          onTimeRevenue: shipmentMetrics.on_time_revenue || 0,
+          onTimeReleaseCount: shipmentMetrics.on_time_shipments || 0,
+          totalAtRisk: shipmentMetrics.late_revenue || 0
+        },
+        source: 'Shipments (PostgreSQL SHIPMENTS table - IQMS fallback)',
+        note: 'IQMS query failed, using shipment-based calculation'
+      })
     }
   } catch (err) {
     console.error('Executive briefing metrics error:', err)
