@@ -1,0 +1,21 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "services": {
+    "api": {
+      "startCommand": "npm run start:api",
+      "buildCommand": "npm run build:api",
+      "root": ".",
+      "envPrefix": "API_",
+      "port": 5050,
+      "detectPort": false
+    },
+    "web": {
+      "startCommand": "npm run start:web",
+      "buildCommand": "npm run build:web",
+      "root": ".",
+      "envPrefix": "WEB_",
+      "port": 3000,
+      "detectPort": false
+    }
+  }
+}
