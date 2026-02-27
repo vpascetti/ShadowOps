@@ -13,6 +13,7 @@
 
 ### Start the Application
 
+**Option 1: Local Development (Standard)**
 ```bash
 # 1. Start PostgreSQL database
 docker-compose up -d
@@ -31,8 +32,27 @@ npm run dev
 # Keep this terminal running
 ```
 
+**Option 2: Password-Protected Remote Access (GitHub Codespaces)**
+```bash
+# 1. Start PostgreSQL database
+docker-compose up -d
+
+# 2. Start backend with password protection
+cd /workspaces/ShadowOps/apps/api
+DEMO_PASSWORD="ShadowOps2026" node index.js &
+
+# 3. Start frontend with external access and password gate
+cd /workspaces/ShadowOps/apps/web
+npm run dev -- --host 0.0.0.0 &
+
+# Note: .env.local must contain VITE_DEMO_PASSWORD_REQUIRED=true
+# This enables the password gate UI
+```
+
 ### Access the Application
-Open your browser to: **http://localhost:5173**
+- **Local**: Open your browser to **http://localhost:5173**
+- **Remote (Codespaces)**: Use the forwarded port URL from the PORTS tab
+  - Password: `ShadowOps2026`
 
 ---
 
@@ -230,6 +250,32 @@ curl http://localhost:5050/api/health
 
 # Check Vite proxy config in vite.config.js
 # Should proxy /api to http://localhost:5050
+```
+
+### Password gate not showing (Codespaces)
+```bash
+# Verify .env.local exists
+cat /workspaces/ShadowOps/apps/web/.env.local
+# Should contain: VITE_DEMO_PASSWORD_REQUIRED=true
+
+# If missing, create it:
+echo "VITE_DEMO_PASSWORD_REQUIRED=true" > /workspaces/ShadowOps/apps/web/.env.local
+
+# Restart the web server
+pkill -f vite
+cd /workspaces/ShadowOps/apps/web && npm run dev -- --host 0.0.0.0 &
+```
+
+### Remote access not working (Codespaces)
+```bash
+# Ensure Vite is bound to all interfaces (not just localhost)
+# Use: npm run dev -- --host 0.0.0.0
+
+# Check network binding
+netstat -tlnp | grep 5173
+# Should show: 0.0.0.0:5173 (not ::1:5173)
+
+# Make sure port 5173 visibility is set to "Public" in PORTS tab
 ```
 
 ### Database is empty
